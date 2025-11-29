@@ -1,0 +1,310 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import 'register_screen.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (_formKey.currentState!.validate()) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      final success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Giriş başarılı!')));
+          // Ana sayfaya yönlendir
+          // Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Giriş başarısız'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final authProvider = Provider.of<AuthProvider>(context);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: Stack(
+        children: [
+          // Header Section - Top 35%
+          Container(
+            height: screenHeight * 0.35,
+            decoration: const BoxDecoration(color: Color(0xFF3BB54A)),
+            child: const Center(
+              child: Text(
+                'Giriş Yap',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+
+          // Form Container - Bottom Sheet Style
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: screenHeight * 0.70,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 40, 24, 20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Email Field
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: const Icon(Icons.mail_outline),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen e-posta adresinizi girin';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Geçerli bir e-posta adresi girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Password Field
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Şifre',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen şifrenizi girin';
+                          }
+                          if (value.length < 8) {
+                            return 'Şifre en az 8 karakter olmalıdır';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      // Forgot Password
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Şifre sıfırlama özelliği yakında eklenecek',
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Şifremi unuttum',
+                            style: TextStyle(
+                              color: Color(0xFF757575),
+                              decoration: TextDecoration.underline,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Login Button
+                      SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3BB54A),
+                            foregroundColor: Colors.white,
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: authProvider.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Giriş yap',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Google Login Button
+                      SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Google ile giriş özelliği yakında eklenecek',
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF555555),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                height: 24,
+                                width: 24,
+                                decoration: const BoxDecoration(
+                                  image: DecorationImage(
+                                    image: NetworkImage(
+                                      'https://lh3.googleusercontent.com/COxitqgJr1sJnIDe8-jiKhxDx1FrYbtRHKJ9z_hELisAlapwE9LUPh6fcXIfb5vwpbMl4xl9H9TRFPc5NOO8Sb3VSgIBrfRYvW6cUA',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Google ile devam et',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // Register Link
+                      Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Hesabın yok mu? ',
+                              style: TextStyle(
+                                color: Color(0xFF555555),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const RegisterScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Kayıt Ol',
+                                style: TextStyle(
+                                  color: Color(0xFF3BB54A),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
