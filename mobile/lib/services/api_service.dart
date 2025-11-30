@@ -3,7 +3,9 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // Backend URL'inizi buraya yazın
-  static const String baseUrl = 'http://localhost:3000/api';
+  // Android Emulator için 10.0.2.2 kullanılır (localhost yerine)
+  static const String baseUrl = 'http://10.0.2.2:3001/api';
+  // iOS Simulator için: 'http://localhost:3001/api'
   // Gerçek sunucu için: 'https://yourdomain.com/api'
 
   // Login endpoint

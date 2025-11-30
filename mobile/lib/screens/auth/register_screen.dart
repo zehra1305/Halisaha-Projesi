@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,6 +22,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+  bool _acceptKVKK = false;
+
+  // Telefon formatı: 05XX XXX XX XX (05 sabit)
+  final _phoneMaskFormatter = MaskTextInputFormatter(
+    mask: '05## ### ## ##',
+    filter: {"#": RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // Telefon alanını 05 ile başlat
+    _phoneController.text = '05';
+  }
 
   @override
   void dispose() {
@@ -38,13 +56,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (!_acceptKVKK) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen KVKK metnini kabul edin')),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       final success = await authProvider.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
+        phone: _phoneController.text.replaceAll(' ', ''), // Boşlukları kaldır
         password: _passwordController.text,
       );
 
@@ -64,6 +89,142 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
     }
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Kullanım Koşulları',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  '1. Genel Hükümler\n\n'
+                  'Bu uygulama, halısaha rezervasyon hizmeti sunmaktadır. '
+                  'Uygulamayı kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız.\n\n'
+                  '2. Kullanıcı Yükümlülükleri\n\n'
+                  '• Doğru ve güncel bilgi vermeyi kabul edersiniz\n'
+                  '• Hesabınızın güvenliğinden siz sorumlusunuz\n'
+                  '• Yaptığınız rezervasyonlara uymanız gerekmektedir\n\n'
+                  '3. Rezervasyon Koşulları\n\n'
+                  '• Rezervasyonlar onay sonrası kesinleşir\n'
+                  '• İptal koşulları saha sahipleri tarafından belirlenir\n'
+                  '• Ödeme bilgileri güvenli şekilde saklanır\n\n'
+                  '4. Gizlilik\n\n'
+                  'Kişisel verileriniz KVKK kapsamında korunur ve üçüncü '
+                  'şahıslarla paylaşılmaz.\n\n'
+                  '5. Sorumluluk Sınırlaması\n\n'
+                  'Uygulama, saha hizmetlerinden sorumlu değildir. '
+                  'Sadece aracılık hizmeti sunmaktadır.',
+                  style: TextStyle(fontSize: 14, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Kapat',
+                style: TextStyle(color: Color(0xFF3BB54A)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _acceptTerms = true;
+                });
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3BB54A),
+              ),
+              child: const Text('Kabul Ediyorum'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showKVKKDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'KVKK Aydınlatma Metni',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Kişisel Verilerin Korunması Kanunu (KVKK) Aydınlatma Metni\n\n'
+                  '1. Veri Sorumlusu\n\n'
+                  'Halısaha Rezervasyon Uygulaması olarak, kişisel verilerinizin '
+                  'korunmasına önem veriyoruz.\n\n'
+                  '2. İşlenen Kişisel Veriler\n\n'
+                  '• Ad Soyad\n'
+                  '• E-posta adresi\n'
+                  '• Telefon numarası\n'
+                  '• Rezervasyon bilgileri\n\n'
+                  '3. Kişisel Verilerin İşlenme Amacı\n\n'
+                  'Verileriniz sadece aşağıdaki amaçlarla işlenmektedir:\n\n'
+                  '• Rezervasyon işlemlerinin gerçekleştirilmesi\n'
+                  '• Kullanıcı hesabı yönetimi\n'
+                  '• İletişim ve bilgilendirme\n'
+                  '• Hukuki yükümlülüklerin yerine getirilmesi\n\n'
+                  '4. Veri Güvenliği\n\n'
+                  'Kişisel verileriniz, güvenli sunucularda saklanır ve '
+                  'şifreleme teknolojileri ile korunur.\n\n'
+                  '5. Haklarınız\n\n'
+                  'KVKK kapsamında aşağıdaki haklara sahipsiniz:\n\n'
+                  '• Verilerinizi öğrenme\n'
+                  '• Düzeltme talep etme\n'
+                  '• Silme talep etme\n'
+                  '• İtiraz etme\n\n'
+                  'Daha fazla bilgi için: info@halisaha.com',
+                  style: TextStyle(fontSize: 14, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Kapat',
+                style: TextStyle(color: Color(0xFF3BB54A)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _acceptKVKK = true;
+                });
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3BB54A),
+              ),
+              child: const Text('Kabul Ediyorum'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -166,8 +327,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [_phoneMaskFormatter],
                         decoration: InputDecoration(
-                          labelText: 'Telefon',
+                          labelText: 'Telefon *',
                           hintText: '05XX XXX XX XX',
                           prefixIcon: const Icon(Icons.phone_outlined),
                           filled: true,
@@ -176,13 +338,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
+                        onTap: () {
+                          // Eğer alan boşsa 05 ile başlat
+                          if (_phoneController.text.isEmpty) {
+                            _phoneController.text = '05';
+                            _phoneController.selection =
+                                TextSelection.fromPosition(
+                                  TextPosition(
+                                    offset: _phoneController.text.length,
+                                  ),
+                                );
+                          }
+                        },
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
+                          if (value == null || value.isEmpty || value == '05') {
                             return 'Lütfen telefon numaranızı girin';
                           }
-                          final phoneRegex = RegExp(r'^0[0-9]{10}$');
-                          if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
-                            return 'Geçerli bir telefon numarası girin';
+                          // Boşlukları kaldır ve kontrol et
+                          final cleanPhone = value.replaceAll(' ', '');
+                          if (cleanPhone.length != 11) {
+                            return 'Telefon numarası 11 haneli olmalıdır';
+                          }
+                          if (!cleanPhone.startsWith('05')) {
+                            return 'Telefon numarası 05 ile başlamalıdır';
                           }
                           return null;
                         },
@@ -294,18 +472,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _acceptTerms = !_acceptTerms;
-                                });
-                              },
-                              child: const Text(
-                                'Kullanım koşullarını kabul ediyorum',
-                                style: TextStyle(
+                            child: RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF555555),
                                 ),
+                                children: [
+                                  const TextSpan(text: 'Okudum, '),
+                                  TextSpan(
+                                    text: 'Kullanım Koşullarını',
+                                    style: const TextStyle(
+                                      color: Color(0xFF3BB54A),
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = _showTermsDialog,
+                                  ),
+                                  const TextSpan(text: ' kabul ediyorum'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // KVKK
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _acceptKVKK,
+                            activeColor: const Color(0xFF3BB54A),
+                            onChanged: (value) {
+                              setState(() {
+                                _acceptKVKK = value ?? false;
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF555555),
+                                ),
+                                children: [
+                                  const TextSpan(text: 'Okudum, '),
+                                  TextSpan(
+                                    text: 'KVKK Metnini',
+                                    style: const TextStyle(
+                                      color: Color(0xFF3BB54A),
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = _showKVKKDialog,
+                                  ),
+                                  const TextSpan(text: ' kabul ediyorum'),
+                                ],
                               ),
                             ),
                           ),

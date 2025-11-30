@@ -18,10 +18,10 @@ class User {
   // JSON'dan User nesnesi oluştur
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? json['_id'] ?? '',
+      id: (json['id'] ?? json['_id'] ?? '').toString(),
       name: json['name'] ?? '',
       email: json['email'] ?? '',
-      phone: json['phone'],
+      phone: json['phone']?.toString(),
       profileImage: json['profileImage'],
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
