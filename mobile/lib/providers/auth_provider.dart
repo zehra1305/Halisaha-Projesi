@@ -134,6 +134,97 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Reset Password
+  Future<bool> resetPassword(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.resetPassword(email);
+
+      if (result['success']) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Verify Reset Code
+  Future<Map<String, dynamic>?> verifyResetCode(
+    String email,
+    String code,
+  ) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.verifyResetCode(email, code);
+
+      if (result['success']) {
+        _isLoading = false;
+        notifyListeners();
+        // Temporary token'ı döndür
+        return {'success': true, 'temporaryToken': result['temporaryToken']};
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return {'success': false};
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false};
+    }
+  }
+
+  // Confirm Reset Password
+  Future<bool> confirmResetPassword(
+    String temporaryToken,
+    String newPassword,
+  ) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.confirmResetPassword(
+        temporaryToken,
+        newPassword,
+      );
+
+      if (result['success']) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Clear error message
   void clearError() {
     _errorMessage = null;

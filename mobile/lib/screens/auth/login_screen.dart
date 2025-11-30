@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,14 +40,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ).showSnackBar(const SnackBar(content: Text('Giriş başarılı!')));
           // Ana sayfaya yönlendir
           // Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.errorMessage ?? 'Giriş başarısız'),
-              backgroundColor: Colors.red,
-            ),
-          );
         }
+        // Hata mesajı artık widget'ta gösteriliyor, SnackBar'a gerek yok
       }
     }
   }
@@ -156,16 +151,48 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
 
+                      // Error Message Display
+                      if (authProvider.errorMessage != null)
+                        Container(
+                          margin: const EdgeInsets.only(top: 16, bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red.shade700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  authProvider.errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       // Forgot Password
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Şifre sıfırlama özelliği yakında eklenecek',
-                                ),
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ForgotPasswordScreen(),
                               ),
                             );
                           },
