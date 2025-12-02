@@ -18,26 +18,23 @@ class RandevuPage extends StatefulWidget {
 class _RandevuPageState extends State<RandevuPage> {
   // --- Durum Yönetimi (State Management) ---
 
-  // Seçilen tarihi ve saati tutmak için
   DateTime _selectedDate = DateTime.now();
-  String _selectedTime = ""; // BAŞLANGIÇTA HİÇBİR SAAT SEÇİLİ OLMASIN
-
-  // Haftalık tarih listesini tutmak için
+  String _selectedTime = "";
   List<DateTime> _weekDates = [];
 
-  // Saat seçenekleri 17:00'dan 23:00'e kadar.
   final List<String> _timeOptions = [
     "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00",
   ];
 
-  // Örnek DOLU SAATLER verisi. Başlangıçta dolu değil.
-  // Not: Bu değişkenler artık buton mantığında kullanılmayacaktır, sadece kod yapısını korumak için tutulur.
-  final Set<String> _fullTimes = {};
+  // API'den çekilen DOLU SAATLER buraya depolanacak.
+  Set<String> _fullTimes = {};
 
   @override
   void initState() {
     super.initState();
     _generateWeekDates(_selectedDate);
+    // SAYFA AÇILIRKEN İLK TARİHİN DOLU SAATLERİNİ ÇEK
+    _fetchFullTimesForDate(_selectedDate);
   }
 
   // Seçilen tarihten başlayarak 7 günlük listeyi oluşturan yardımcı fonksiyon
@@ -50,15 +47,40 @@ class _RandevuPageState extends State<RandevuPage> {
     }
   }
 
-  // Eğer seçili saat doluysa veya onaylandıysa, dolu olmayan ilk saate geçer.
-  void _resetSelectedTime() {
-    final availableTime = _timeOptions.firstWhere(
-          (time) => !_fullTimes.contains(time),
-      orElse: () => "",
-    );
-    setState(() {
-      _selectedTime = availableTime;
-    });
+  // --- YENİ EKLENEN FONKSİYON: DOLU SAATLERİ ÇEKME ---
+  Future<void> _fetchFullTimesForDate(DateTime date) async {
+    // Tarihi YYYY-MM-DD formatına çevir
+    String tarihFormat = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    // Örnek bir API adresi, tarihi Query Parametresi olarak gönderiyoruz
+    final String url = "http://10.0.2.2:5000/api/reservations/full_times?tarih=$tarihFormat";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        // API'den gelen JSON'ı çözümle (Beklenen Format: List<String>)
+        final List<dynamic> responseData = jsonDecode(response.body);
+        final Set<String> fetchedTimes = responseData.map((e) => e.toString()).toSet();
+
+        setState(() {
+          _fullTimes = fetchedTimes; // Dolu saatler setini günceller
+          _selectedTime = ""; // Yeni saat çekildiği için seçimi sıfırla
+        });
+      } else {
+        // Hata durumunda boş döndür, UI'ı etkileme
+        setState(() {
+          _fullTimes = {};
+        });
+        print("Dolu saatleri çekerken hata: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Bağlantı Hatası (Dolu Saat): $e");
+      // Bağlantı hatasında dolu saatleri temizle
+      setState(() {
+        _fullTimes = {};
+      });
+    }
   }
 
   // Takvim açma ve yeni tarih seçme fonksiyonu
@@ -84,38 +106,37 @@ class _RandevuPageState extends State<RandevuPage> {
       setState(() {
         _selectedDate = picked;
         _generateWeekDates(picked);
-        _fullTimes.clear();
         _selectedTime = "";
       });
+      // TARİH DEĞİŞTİĞİNDE: Dolu saatleri yeniden çek
+      _fetchFullTimesForDate(picked);
     }
   }
 
-  // --- API Çağrısı YAPAN YENİ VE GÜNCEL FONKSİYON ---
+  // --- API Çağrısı YAPAN GÜNCEL FONKSİYON ---
   Future<void> _confirmAppointment() async {
-    // 1. BACKEND ADRESİ (Port 5000 ve Emülatör IP'si kullanıldı)
-    const String url = "http://10.0.2.2:5000/api/reservations";
+    // 1. BACKEND ADRESİ (POST isteği)
+    const String postUrl = "http://10.0.2.2:5000/api/reservations";
 
     // 2. Gönderilecek Veri Hazırlığı
-    // Tarihi YYYY-MM-DD formatına çevir
     String tarihFormat = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
 
     Map<String, dynamic> randevuVerisi = {
       "tarih": tarihFormat,
       "saat": _selectedTime,
-      "kullanici_id": "test_kullanici_123" // Test ID'si
+      "kullanici_id": "test_kullanici_123"
     };
 
     try {
-      // Yükleniyor bilgisi göster
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Randevu oluşturuluyor...')),
       );
 
       // 3. İstek Gönderme
       final response = await http.post(
-        Uri.parse(url),
+        Uri.parse(postUrl),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(randevuVerisi), // Veriyi JSON formatına çevir
+        body: jsonEncode(randevuVerisi),
       );
 
       // 4. Sonucu Kontrol Etme
@@ -123,15 +144,17 @@ class _RandevuPageState extends State<RandevuPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(backgroundColor: Color(0xFF2FB335), content: Text('Randevu Başarıyla İletildi! ✅')),
         );
+
+        // 🚨 YENİ EKLENEN KISIM: Randevu onaylandıktan sonra dolu saatleri yeniden çek
+        _fetchFullTimesForDate(_selectedDate);
+
       } else {
-        // Hata mesajını backend'den al ve göster
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(backgroundColor: Colors.red, content: Text('Hata: ${response.body}')),
         );
       }
     } catch (e) {
       print("Bağlantı Hatası: $e");
-      // Bağlantı kopukluğu gibi genel hatalar için
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(backgroundColor: Colors.red, content: Text('Sunucuya bağlanılamadı!')),
       );
@@ -151,9 +174,10 @@ class _RandevuPageState extends State<RandevuPage> {
       onTap: isPastDay ? null : () {
         setState(() {
           _selectedDate = date;
-          _fullTimes.clear();
           _selectedTime = "";
         });
+        // TARİH SEÇİLDİĞİNDE: Dolu saatleri yeniden çek
+        _fetchFullTimesForDate(date);
       },
       child: Container(
         width: 60,
@@ -204,7 +228,7 @@ class _RandevuPageState extends State<RandevuPage> {
   Widget _buildTimeButton(String time, double screenWidth) {
     bool isSelected = time == _selectedTime;
 
-    // Saat dolu mu kontrolü ve Geçmiş saat kontrolü mantığı korunur
+    // 🚨 KRİTİK KONTROL: Bu saat, API'den gelen dolu saatler setinde var mı?
     bool isFull = _fullTimes.contains(time);
 
     bool isPastTime = false;
@@ -220,6 +244,7 @@ class _RandevuPageState extends State<RandevuPage> {
       }
     }
 
+    // Butonun pasif olması (tıklanamaması)
     bool isDisabled = isFull || isPastTime;
 
 
@@ -229,7 +254,7 @@ class _RandevuPageState extends State<RandevuPage> {
         : (screenWidth - 40 - 24) / 3.5;
 
     return GestureDetector(
-      onTap: isDisabled ? null : () {
+      onTap: isDisabled ? null : () { // isFull veya isPastTime ise null (tıklanamaz)
         setState(() {
           _selectedTime = time;
         });
@@ -239,7 +264,7 @@ class _RandevuPageState extends State<RandevuPage> {
         width: buttonWidth,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isDisabled
+          color: isDisabled // Dolu veya geçmiş ise gri renk
               ? _fullTimeColor
               : isSelected
               ? _futsalGreen
@@ -261,11 +286,11 @@ class _RandevuPageState extends State<RandevuPage> {
             fontSize: 16,
             fontWeight: FontWeight.w500,
             color: isDisabled
-                ? Colors.grey.shade700
+                ? Colors.grey.shade700 // Pasif ve doluysa koyu gri
                 : isSelected
                 ? Colors.white
                 : Colors.black87,
-            decoration: isFull ? TextDecoration.lineThrough : null,
+            decoration: isFull ? TextDecoration.lineThrough : null, // Doluysa üstü çizili
             decorationColor: Colors.grey.shade700,
           ),
         ),
@@ -291,14 +316,10 @@ class _RandevuPageState extends State<RandevuPage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-
-    // Seçili ay ve yılı gösteren format
     String monthYear = "${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // --- 1. Uygulama Çubuğu (App Bar) ---
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
@@ -317,14 +338,11 @@ class _RandevuPageState extends State<RandevuPage> {
         elevation: 0,
       ),
 
-      // --- 2. Sayfa Gövdesi (Body) ---
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-
-            // --- 2.1. Tarih Seçme Bölümü ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -335,8 +353,6 @@ class _RandevuPageState extends State<RandevuPage> {
                 ),
               ],
             ),
-
-            // Tarih seçenekleri yatayda sıralanır
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -345,16 +361,12 @@ class _RandevuPageState extends State<RandevuPage> {
                 }).toList(),
               ),
             ),
-
-            // --- 2.2. Saat Seçme Bölümü ---
             _buildSectionTitle("Saat Seç"),
             Wrap(
               spacing: 8.0,
               runSpacing: 8.0,
               children: _timeOptions.map((time) => _buildTimeButton(time, screenWidth)).toList(),
             ),
-
-            // --- 2.3. Notlar Bölümü ---
             _buildSectionTitle("Notunuz (Opsiyonel)"),
             Container(
               decoration: BoxDecoration(
@@ -384,8 +396,6 @@ class _RandevuPageState extends State<RandevuPage> {
           ],
         ),
       ),
-
-      // 🚨 İstenen Değişiklik: --- 3. Sabit Onay Butonu (Bottom Bar) ---
       bottomNavigationBar: Container(
         padding: EdgeInsets.fromLTRB(20, 10, 20, 20 + MediaQuery.of(context).padding.bottom),
         decoration: BoxDecoration(
@@ -400,20 +410,14 @@ class _RandevuPageState extends State<RandevuPage> {
           ],
         ),
         child: ElevatedButton(
-          // DEĞİŞEN KISIM BURASI:
-          // Eğer saat seçili değilse (boşsa) null olsun (tıklanmasın),
-          // Saat seçiliyse _confirmAppointment fonksiyonunu çalıştırsın.
           onPressed: _selectedTime.isNotEmpty ? _confirmAppointment : null,
-
           style: ElevatedButton.styleFrom(
             backgroundColor: _futsalGreen,
             minimumSize: const Size(double.infinity, 56),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            // Pasifken (saat seçilmemişken) gri görünsün istersen burayı silebilirsin.
-            // Ama senin kodunda yeşil kalmasını istemişsin:
-            disabledBackgroundColor: _futsalGreen.withOpacity(0.5), // Hafif soluk yeşil yapalım ki pasif olduğu anlaşılsın
+            disabledBackgroundColor: _futsalGreen.withOpacity(0.5),
           ),
           child: const Text(
             "Randevuyu Onayla",
