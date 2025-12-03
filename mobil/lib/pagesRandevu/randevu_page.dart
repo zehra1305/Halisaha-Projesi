@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // <<< YENİ: dotenv eklendi!
 
 // Tema rengimiz Figma tasarımındaki yeşil renk kodu: 2FB335
 const Color _futsalGreen = Color(0xFF2FB335);
@@ -32,9 +33,19 @@ class _RandevuPageState extends State<RandevuPage> {
   Set<String> _confirmedTimes = {}; // Admin Onayladı (Dolu - Gri)
   Set<String> _pendingTimes = {};   // Admin Onay Bekliyor (Sarı)
 
+  // API Base URL'i .env dosyasından çekiyoruz
+  final String? _apiBaseUrl = dotenv.env['API_BASE_URL'];
+
   @override
   void initState() {
     super.initState();
+    // API adresi yüklenemezse kullanıcıyı bilgilendir.
+    if (_apiBaseUrl == null) {
+      // Hata mesajını terminalde göster.
+      print("HATA: API_BASE_URL .env dosyasından yüklenemedi!");
+      // Bu durumda API çağrısı yapılmamalıdır.
+    }
+
     _generateWeekDates(_selectedDate);
     // SAYFA AÇILIRKEN İLK TARİHİN DOLU SAATLERİNİ ÇEK
     _fetchReservationStatusesForDate(_selectedDate);
@@ -43,6 +54,7 @@ class _RandevuPageState extends State<RandevuPage> {
   // Seçilen tarihten başlayarak 7 günlük listeyi oluşturan yardımcı fonksiyon
   void _generateWeekDates(DateTime initialDate) {
     _weekDates.clear();
+    // Haftanın başlangıcı (Pazartesi)
     DateTime startOfWeek = initialDate.subtract(Duration(days: initialDate.weekday - 1));
 
     for (int i = 0; i < 7; i++) {
@@ -50,19 +62,15 @@ class _RandevuPageState extends State<RandevuPage> {
     }
   }
 
-  // --- GÜNCELLENEN FONKSİYON: RANDVU DURUMLARINI ÇEKME ---
-  // Sunucudan hem onaylanmış hem de onay bekleyen saatleri çeker.
+  // --- GÜNCELLENEN FONKSİYON: RANDVU DURUMLARINI ÇEKME (GET İSTEĞİ) ---
   Future<void> _fetchReservationStatusesForDate(DateTime date) async {
+    if (_apiBaseUrl == null) return; // API adresi yoksa işlemi durdur
+
     // Tarihi YYYY-MM-DD formatına çevir
     String tarihFormat = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-    // Örnek bir API adresi
-    // API'nin şu formatı döndürmesi beklenir:
-    // {
-    //   "confirmed": ["18:00", "20:00"],
-    //   "pending": ["19:00"]
-    // }
-    final String url = "http://10.0.2.2:5000/api/reservations/statuses?tarih=$tarihFormat";
+    // <<< KRİTİK DÜZELTME 1: Dinamik URL Kullanımı >>>
+    final String url = "$_apiBaseUrl/api/reservations/statuses?tarih=$tarihFormat";
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -128,10 +136,17 @@ class _RandevuPageState extends State<RandevuPage> {
     }
   }
 
-  // --- API Çağrısı YAPAN GÜNCEL FONKSİYON ---
+  // --- API Çağrısı YAPAN GÜNCEL FONKSİYON (POST İSTEĞİ) ---
   Future<void> _confirmAppointment() async {
-    // 1. BACKEND ADRESİ (POST isteği)
-    const String postUrl = "http://10.0.2.2:5000/api/reservations";
+    if (_apiBaseUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(backgroundColor: Colors.red, content: Text('Hata: API yapılandırması yüklenemedi.')),
+      );
+      return;
+    }
+
+    // <<< KRİTİK DÜZELTME 2: Dinamik URL Kullanımı >>>
+    final String postUrl = "$_apiBaseUrl/api/reservations";
 
     // 2. Gönderilecek Veri Hazırlığı
     String tarihFormat = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
@@ -161,7 +176,7 @@ class _RandevuPageState extends State<RandevuPage> {
           const SnackBar(backgroundColor: Color(0xFF2FB335), content: Text('Randevu Başarıyla İletildi! ✅ Admin onayı bekleniyor.')),
         );
 
-        // 🚨 KRİTİK KISIM: Randevu oluşturulduktan sonra, yeni durumu yansıtmak için listeleri yeniden çek.
+        // Randevu oluşturulduktan sonra, yeni durumu yansıtmak için listeleri yeniden çek.
         _fetchReservationStatusesForDate(_selectedDate);
 
       } else {
@@ -178,6 +193,7 @@ class _RandevuPageState extends State<RandevuPage> {
   }
 
   // --- Widget Oluşturucular (Reusable Components) ---
+  // ... (Geri kalan Widget'lar aynı kalıyor)
 
   // Tarih Seçimi Butonu (Haftalık görünüm için) - DEĞİŞİKLİK YOK
   Widget _buildDateButton(DateTime date) {

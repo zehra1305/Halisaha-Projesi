@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // .env paketi eklendi
 import 'pagesRandevu/randevu_page.dart';
-void main() {
+
+// main() fonksiyonu artık asenkron (async) olmalı
+Future<void> main() async {
+  // Widget'ların bağlanmasını sağlar ve .env yüklemesinden önce gereklidir.
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // .env dosyasını yükle (Dosya adının ".env" olduğundan emin olun)
+  await dotenv.load(fileName: ".env");
+
   // Uygulamanın çalışmasını başlatır.
   runApp(const MyApp());
 }
@@ -10,12 +19,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Burası hala aynı kalıyor
     return MaterialApp(
       debugShowCheckedModeBanner: false, // Sağ üstteki debug etiketi kalkar
       title: 'Randevu Uygulaması',
       theme: ThemeData(
-        // Tema rengi, RandevuPage'deki _futsalGreen ile tutarlı olması için
-        // primaryColor yerine colorScheme kullanılması önerilir.
         colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.green).copyWith(
           primary: const Color(0xFF2FB335),
         ),
