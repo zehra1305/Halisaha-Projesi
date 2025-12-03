@@ -5,7 +5,9 @@ import 'dart:convert';
 // Tema rengimiz Figma tasarımındaki yeşil renk kodu: 2FB335
 const Color _futsalGreen = Color(0xFF2FB335);
 const Color _borderColor = Color(0xFFE0E0E0);
-const Color _fullTimeColor = Color(0xFFE0E0E0); // Dolu saatler için gri renk
+// Yeni Renkler
+const Color _confirmedColor = Color(0xFF9E9E9E); // Onaylanmış/Dolu Saatler için Koyu Gri
+const Color _pendingColor = Color(0xFFFFC107); // Onay Bekleyen Saatler için Sarı
 
 // Kullanıcı seçimlerini yönetmek için StatefulWidget kullanıyoruz
 class RandevuPage extends StatefulWidget {
@@ -26,15 +28,16 @@ class _RandevuPageState extends State<RandevuPage> {
     "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00",
   ];
 
-  // API'den çekilen DOLU SAATLER buraya depolanacak.
-  Set<String> _fullTimes = {};
+  // API'den çekilen SAATLER buraya depolanacak.
+  Set<String> _confirmedTimes = {}; // Admin Onayladı (Dolu - Gri)
+  Set<String> _pendingTimes = {};   // Admin Onay Bekliyor (Sarı)
 
   @override
   void initState() {
     super.initState();
     _generateWeekDates(_selectedDate);
     // SAYFA AÇILIRKEN İLK TARİHİN DOLU SAATLERİNİ ÇEK
-    _fetchFullTimesForDate(_selectedDate);
+    _fetchReservationStatusesForDate(_selectedDate);
   }
 
   // Seçilen tarihten başlayarak 7 günlük listeyi oluşturan yardımcı fonksiyon
@@ -47,38 +50,50 @@ class _RandevuPageState extends State<RandevuPage> {
     }
   }
 
-  // --- YENİ EKLENEN FONKSİYON: DOLU SAATLERİ ÇEKME ---
-  Future<void> _fetchFullTimesForDate(DateTime date) async {
+  // --- GÜNCELLENEN FONKSİYON: RANDVU DURUMLARINI ÇEKME ---
+  // Sunucudan hem onaylanmış hem de onay bekleyen saatleri çeker.
+  Future<void> _fetchReservationStatusesForDate(DateTime date) async {
     // Tarihi YYYY-MM-DD formatına çevir
     String tarihFormat = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-    // Örnek bir API adresi, tarihi Query Parametresi olarak gönderiyoruz
-    final String url = "http://10.0.2.2:5000/api/reservations/full_times?tarih=$tarihFormat";
+    // Örnek bir API adresi
+    // API'nin şu formatı döndürmesi beklenir:
+    // {
+    //   "confirmed": ["18:00", "20:00"],
+    //   "pending": ["19:00"]
+    // }
+    final String url = "http://10.0.2.2:5000/api/reservations/statuses?tarih=$tarihFormat";
 
     try {
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        // API'den gelen JSON'ı çözümle (Beklenen Format: List<String>)
-        final List<dynamic> responseData = jsonDecode(response.body);
-        final Set<String> fetchedTimes = responseData.map((e) => e.toString()).toSet();
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        final Set<String> fetchedConfirmed = (responseData['confirmed'] as List<dynamic>?)
+            ?.map((e) => e.toString()).toSet() ?? {};
+        final Set<String> fetchedPending = (responseData['pending'] as List<dynamic>?)
+            ?.map((e) => e.toString()).toSet() ?? {};
 
         setState(() {
-          _fullTimes = fetchedTimes; // Dolu saatler setini günceller
+          _confirmedTimes = fetchedConfirmed; // Admin Onayladı (Gri)
+          _pendingTimes = fetchedPending;     // Admin Onay Bekliyor (Sarı)
           _selectedTime = ""; // Yeni saat çekildiği için seçimi sıfırla
         });
       } else {
-        // Hata durumunda boş döndür, UI'ı etkileme
+        // Hata durumunda setleri temizle
         setState(() {
-          _fullTimes = {};
+          _confirmedTimes = {};
+          _pendingTimes = {};
         });
-        print("Dolu saatleri çekerken hata: ${response.statusCode}");
+        print("Randevu durumlarını çekerken hata: ${response.statusCode}");
       }
     } catch (e) {
-      print("Bağlantı Hatası (Dolu Saat): $e");
-      // Bağlantı hatasında dolu saatleri temizle
+      print("Bağlantı Hatası (Randevu Durum): $e");
+      // Bağlantı hatasında setleri temizle
       setState(() {
-        _fullTimes = {};
+        _confirmedTimes = {};
+        _pendingTimes = {};
       });
     }
   }
@@ -108,8 +123,8 @@ class _RandevuPageState extends State<RandevuPage> {
         _generateWeekDates(picked);
         _selectedTime = "";
       });
-      // TARİH DEĞİŞTİĞİNDE: Dolu saatleri yeniden çek
-      _fetchFullTimesForDate(picked);
+      // TARİH DEĞİŞTİĞİNDE: Randevu durumlarını yeniden çek
+      _fetchReservationStatusesForDate(picked);
     }
   }
 
@@ -124,12 +139,13 @@ class _RandevuPageState extends State<RandevuPage> {
     Map<String, dynamic> randevuVerisi = {
       "tarih": tarihFormat,
       "saat": _selectedTime,
-      "kullanici_id": "test_kullanici_123"
+      "kullanici_id": "test_kullanici_123",
+      // Yeni randevular ilk başta "pending" (onay bekleyen) olarak sunucuda kaydedilmeli
     };
 
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Randevu oluşturuluyor...')),
+        const SnackBar(content: Text('Randevu oluşturuluyor ve onay bekleniyor...')),
       );
 
       // 3. İstek Gönderme
@@ -142,11 +158,11 @@ class _RandevuPageState extends State<RandevuPage> {
       // 4. Sonucu Kontrol Etme
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(backgroundColor: Color(0xFF2FB335), content: Text('Randevu Başarıyla İletildi! ✅')),
+          const SnackBar(backgroundColor: Color(0xFF2FB335), content: Text('Randevu Başarıyla İletildi! ✅ Admin onayı bekleniyor.')),
         );
 
-        // 🚨 YENİ EKLENEN KISIM: Randevu onaylandıktan sonra dolu saatleri yeniden çek
-        _fetchFullTimesForDate(_selectedDate);
+        // 🚨 KRİTİK KISIM: Randevu oluşturulduktan sonra, yeni durumu yansıtmak için listeleri yeniden çek.
+        _fetchReservationStatusesForDate(_selectedDate);
 
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -163,7 +179,7 @@ class _RandevuPageState extends State<RandevuPage> {
 
   // --- Widget Oluşturucular (Reusable Components) ---
 
-  // Tarih Seçimi Butonu (Haftalık görünüm için)
+  // Tarih Seçimi Butonu (Haftalık görünüm için) - DEĞİŞİKLİK YOK
   Widget _buildDateButton(DateTime date) {
     bool isSelected = date.day == _selectedDate.day && date.month == _selectedDate.month && date.year == _selectedDate.year;
     String dayName = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'][date.weekday - 1];
@@ -176,8 +192,8 @@ class _RandevuPageState extends State<RandevuPage> {
           _selectedDate = date;
           _selectedTime = "";
         });
-        // TARİH SEÇİLDİĞİNDE: Dolu saatleri yeniden çek
-        _fetchFullTimesForDate(date);
+        // TARİH SEÇİLDİĞİNDE: Randevu durumlarını yeniden çek
+        _fetchReservationStatusesForDate(date);
       },
       child: Container(
         width: 60,
@@ -224,13 +240,15 @@ class _RandevuPageState extends State<RandevuPage> {
     );
   }
 
-  // Saat Seçimi Butonu
+  // --- GÜNCELLENEN WIDGET: Saat Seçimi Butonu ---
   Widget _buildTimeButton(String time, double screenWidth) {
     bool isSelected = time == _selectedTime;
 
-    // 🚨 KRİTİK KONTROL: Bu saat, API'den gelen dolu saatler setinde var mı?
-    bool isFull = _fullTimes.contains(time);
+    // Durum Kontrolleri
+    bool isConfirmed = _confirmedTimes.contains(time); // Admin Onayladı (Dolu - Gri)
+    bool isPending = _pendingTimes.contains(time);     // Admin Onay Bekliyor (Sarı)
 
+    // Geçmiş Saat Kontrolü
     bool isPastTime = false;
     if (_selectedDate.year == DateTime.now().year &&
         _selectedDate.month == DateTime.now().month &&
@@ -244,8 +262,35 @@ class _RandevuPageState extends State<RandevuPage> {
       }
     }
 
-    // Butonun pasif olması (tıklanamaması)
-    bool isDisabled = isFull || isPastTime;
+    // Butonun pasif olması (tıklanamaması): Onaylanmış, Onay Bekleyen veya Geçmiş saat ise pasif.
+    bool isDisabled = isConfirmed || isPending || isPastTime;
+
+    // Arka Plan Rengi Belirleme
+    Color backgroundColor;
+    Color textColor;
+    TextDecoration? textDecoration;
+    Color? decorationColor;
+
+    if (isDisabled) {
+      if (isConfirmed) {
+        backgroundColor = _confirmedColor; // Gri (Dolu)
+        textColor = Colors.white; // Yazı rengi beyaz yapıldı
+        textDecoration = TextDecoration.lineThrough; // Üstü çizili
+        decorationColor = Colors.white;
+      } else if (isPending) {
+        backgroundColor = _pendingColor; // Sarı (Onay Bekleyen)
+        textColor = Colors.black87; // Yazı rengi siyah
+      } else { // isPastTime (Geçmiş saat)
+        backgroundColor = Colors.grey.shade200;
+        textColor = Colors.grey.shade700;
+      }
+    } else if (isSelected) {
+      backgroundColor = _futsalGreen;
+      textColor = Colors.white;
+    } else {
+      backgroundColor = Colors.white;
+      textColor = Colors.black87;
+    }
 
 
     // Duyarlılık: Saat butonu genişliğini ekranın genişliğine göre hesaplıyoruz.
@@ -254,7 +299,7 @@ class _RandevuPageState extends State<RandevuPage> {
         : (screenWidth - 40 - 24) / 3.5;
 
     return GestureDetector(
-      onTap: isDisabled ? null : () { // isFull veya isPastTime ise null (tıklanamaz)
+      onTap: isDisabled ? null : () { // isDisabled ise null (tıklanamaz)
         setState(() {
           _selectedTime = time;
         });
@@ -264,19 +309,15 @@ class _RandevuPageState extends State<RandevuPage> {
         width: buttonWidth,
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isDisabled // Dolu veya geçmiş ise gri renk
-              ? _fullTimeColor
-              : isSelected
-              ? _futsalGreen
-              : Colors.white,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isDisabled
-                ? _fullTimeColor
-                : isSelected
+            color: isSelected && !isDisabled
                 ? _futsalGreen
+                : isDisabled
+                ? backgroundColor // Pasifse kenarlık rengini arka plan rengi yap
                 : _borderColor,
-            width: isSelected ? 2.0 : 1.0,
+            width: isSelected && !isDisabled ? 2.0 : 1.0,
           ),
         ),
         alignment: Alignment.center,
@@ -285,20 +326,16 @@ class _RandevuPageState extends State<RandevuPage> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: isDisabled
-                ? Colors.grey.shade700 // Pasif ve doluysa koyu gri
-                : isSelected
-                ? Colors.white
-                : Colors.black87,
-            decoration: isFull ? TextDecoration.lineThrough : null, // Doluysa üstü çizili
-            decorationColor: Colors.grey.shade700,
+            color: textColor,
+            decoration: textDecoration,
+            decorationColor: decorationColor,
           ),
         ),
       ),
     );
   }
 
-  // Başlık Metni
+  // Başlık Metni - DEĞİŞİKLİK YOK
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 24.0, bottom: 12.0),
@@ -410,7 +447,7 @@ class _RandevuPageState extends State<RandevuPage> {
           ],
         ),
         child: ElevatedButton(
-          onPressed: _selectedTime.isNotEmpty ? _confirmAppointment : null,
+          onPressed: _selectedTime.isNotEmpty && !_confirmedTimes.contains(_selectedTime) && !_pendingTimes.contains(_selectedTime) ? _confirmAppointment : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: _futsalGreen,
             minimumSize: const Size(double.infinity, 56),
