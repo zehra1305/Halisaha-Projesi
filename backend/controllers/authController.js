@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const db = require('../config/database');
 const SendMailer = require('../utils/sendMail');
 const { createTemporaryToken, decodedTemporaryToken } = require('../utils/tokenHelper');
+const { auth } = require('../config/firebase');
 
 // Moment timezone ayarı
 moment.tz.setDefault('Europe/Istanbul');
@@ -397,3 +398,106 @@ exports.confirmResetPassword = async (req, res) => {
         });
     }
 };
+
+// Google ile giriş
+exports.googleLogin = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'ID token gereklidir' 
+            });
+        }
+
+        // Firebase token'ını doğrula
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const email = decodedToken.email;
+        const fullName = decodedToken.name || '';
+        const [ad = '', soyad = ''] = fullName.split(' ', 2);
+
+        // Kullanıcıyı veritabanında kontrol et
+        let kullanici = await db.query(
+            'SELECT kullanici_id, email, ad, soyad, profil_fotografi FROM kullanici WHERE email = $1',
+            [email]
+        );
+
+        let userData;
+
+        if (kullanici.rows.length === 0) {
+            // Yeni kullanıcı ekle
+            const insertResult = await db.query(
+                'INSERT INTO kullanici (email, sifre_hash, ad, soyad) VALUES ($1, $2, $3, $4) RETURNING kullanici_id, email, ad, soyad, profil_fotografi',
+                [email, 'google_auth', ad, soyad]
+            );
+            
+            userData = insertResult.rows[0];
+            
+            return res.status(201).json({
+                success: true,
+                message: 'Kullanıcı kaydedildi ve giriş yapıldı',
+                user: {
+                    id: userData.kullanici_id,
+                    email: userData.email,
+                    name: `${userData.ad} ${userData.soyad}`.trim(),
+                    phone: null,
+                    profileImage: userData.profil_fotografi,
+                    createdAt: new Date().toISOString()
+                },
+            });
+        } else {
+            // Var olan kullanıcı giriş yaptı
+            userData = kullanici.rows[0];
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Giriş başarılı',
+                user: {
+                    id: userData.kullanici_id,
+                    email: userData.email,
+                    name: `${userData.ad} ${userData.soyad}`.trim(),
+                    phone: null,
+                    profileImage: userData.profil_fotografi,
+                    createdAt: null
+                },
+            });
+        }
+    } catch (error) {
+        console.error('Google login hatası:', error);
+        return res.status(401).json({
+            success: false,
+            message: 'Kimlik doğrulama başarısız',
+            error: error.message,
+        });
+    }
+};
+
+// Firebase token doğrulama
+exports.verifyToken = async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split('Bearer ')[1];
+
+        if (!token) {
+            return res.status(401).json({ 
+                success: false,
+                message: 'Token gereklidir' 
+            });
+        }
+
+        const decodedToken = await auth.verifyIdToken(token);
+        
+        return res.status(200).json({
+            success: true,
+            user: decodedToken,
+        });
+    } catch (error) {
+        console.error('Token doğrulama hatası:', error);
+        return res.status(401).json({
+            success: false,
+            message: 'Geçersiz token',
+            error: error.message
+        });
+    }
+};
+

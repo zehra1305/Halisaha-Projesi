@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -7,6 +9,13 @@ import '../services/storage_service.dart';
 class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+    serverClientId:
+        '679415860742-017f5bv77b4bja9ujsint6b8kuks9lhs.apps.googleusercontent.com',
+  );
+  final firebase_auth.FirebaseAuth _firebaseAuth =
+      firebase_auth.FirebaseAuth.instance;
 
   User? _user;
   bool _isLoading = false;
@@ -110,9 +119,91 @@ class AuthProvider with ChangeNotifier {
   // Logout
   Future<void> logout() async {
     await _storageService.clearAll();
+
+    // Google Sign Out
+    if (await _googleSignIn.isSignedIn()) {
+      await _googleSignIn.signOut();
+    }
+
+    // Firebase Sign Out
+    await _firebaseAuth.signOut();
+
     _user = null;
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // Google ile giriş
+  Future<bool> loginWithGoogle() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // Google Sign In
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        _errorMessage = 'Google girişi iptal edildi';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Google Auth
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Firebase Credential oluştur
+      final firebase_auth.AuthCredential credential =
+          firebase_auth.GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+
+      // Firebase ile giriş yap
+      final firebase_auth.UserCredential userCredential = await _firebaseAuth
+          .signInWithCredential(credential);
+
+      // ID Token al
+      final String? idToken = await userCredential.user?.getIdToken();
+
+      if (idToken == null) {
+        _errorMessage = 'Token alınamadı';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Backend'e gönder
+      final result = await _apiService.googleLogin(idToken);
+
+      if (result['success']) {
+        final data = result['data'];
+
+        // User bilgilerini kaydet
+        _user = User.fromJson(data['user']);
+        await _storageService.saveUserInfo(
+          userId: _user!.id,
+          email: _user!.email,
+          name: _user!.name,
+        );
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Google girişi başarısız: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   // Check if user is logged in

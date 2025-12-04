@@ -71,17 +71,17 @@ class ApiService {
   }
 
   // Google OAuth login
-  Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
+  Future<Map<String, dynamic>> googleLogin(String idToken) async {
     try {
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/google'),
+            Uri.parse('$baseUrl/auth/google-login'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'idToken': idToken}),
           )
           .timeout(timeout);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(response.body)};
       } else {
         return {

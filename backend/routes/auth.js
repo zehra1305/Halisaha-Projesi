@@ -19,4 +19,10 @@ router.post('/verify-reset-code', authController.verifyResetCode);
 // Şifre sıfırlama - Yeni şifre belirle
 router.post('/confirm-reset-password', authController.confirmResetPassword);
 
+// Google ile giriş
+router.post('/google-login', authController.googleLogin);
+
+// Firebase token doğrulama
+router.post('/verify-token', authController.verifyToken);
+
 module.exports = router;
