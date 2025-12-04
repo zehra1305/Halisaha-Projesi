@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const session = require('express-session');
 const db = require('./config/database');
 require('dotenv').config();
 
@@ -8,11 +10,29 @@ const PORT = process.env.PORT || 3001;
 
 // Routes
 const authRoutes = require('./routes/auth');
+const profileRoutes = require('./routes/profile');
+const profileRoutesNew = require('./routes/profileRoutes');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session middleware
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'halisaha-secret-key-2024',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: false, // Set to true if using HTTPS
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Static files - Profil fotoğrafları için
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Sağlık kontrol endpoint
 app.get('/health', (req, res) => {
@@ -37,6 +57,12 @@ app.get('/api/health-db', async (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// Profile routes (API)
+app.use('/api/profile', profileRoutes);
+
+// Profile routes (Session-based)
+app.use('/api', profileRoutesNew);
 
 // Sunucuyu başlat
 app.listen(PORT, () => {
