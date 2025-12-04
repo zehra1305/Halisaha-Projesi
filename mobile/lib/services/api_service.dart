@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ApiService {
@@ -177,6 +178,150 @@ class ApiService {
           'success': false,
           'message':
               jsonDecode(response.body)['message'] ?? 'Şifre değiştirilemedi',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Get profile
+  Future<Map<String, dynamic>> getProfile(String userId) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/profile/$userId'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'] ?? 'Profil alınamadı',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Update profile
+  Future<Map<String, dynamic>> updateProfile(
+    String userId, {
+    String? name,
+    String? phone,
+  }) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (phone != null) body['phone'] = phone;
+
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/profile/$userId'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {
+          'success': false,
+          'message':
+              jsonDecode(response.body)['message'] ?? 'Profil güncellenemedi',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Change password
+  Future<Map<String, dynamic>> changePassword(
+    String userId,
+    String currentPassword,
+    String newPassword,
+  ) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/profile/$userId/change-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'currentPassword': currentPassword,
+              'newPassword': newPassword,
+            }),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Şifreniz başarıyla değiştirildi'};
+      } else {
+        return {
+          'success': false,
+          'message':
+              jsonDecode(response.body)['message'] ?? 'Şifre değiştirilemedi',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Upload profile photo
+  Future<Map<String, dynamic>> uploadProfilePhoto(
+    String userId,
+    File imageFile,
+  ) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/profile/$userId/upload-photo'),
+      );
+
+      request.files.add(
+        await http.MultipartFile.fromPath('photo', imageFile.path),
+      );
+
+      final streamedResponse = await request.send().timeout(timeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {
+          'success': false,
+          'message':
+              jsonDecode(response.body)['message'] ?? 'Fotoğraf yüklenemedi',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Delete profile photo
+  Future<Map<String, dynamic>> deleteProfilePhoto(String userId) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/profile/$userId/photo'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Fotoğraf silindi'};
+      } else {
+        return {
+          'success': false,
+          'message':
+              jsonDecode(response.body)['message'] ?? 'Fotoğraf silinemedi',
         };
       }
     } catch (e) {

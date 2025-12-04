@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import '../home/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,7 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
           ).showSnackBar(const SnackBar(content: Text('Giriş başarılı!')));
           // Ana sayfaya yönlendir
-          // Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
         }
         // Hata mesajı artık widget'ta gösteriliyor, SnackBar'a gerek yok
       }

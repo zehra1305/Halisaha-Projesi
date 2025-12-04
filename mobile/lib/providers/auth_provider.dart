@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -229,5 +230,172 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // Update profile
+  Future<bool> updateProfile({String? name, String? phone}) async {
+    if (_user == null) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.updateProfile(
+        _user!.id,
+        name: name,
+        phone: phone,
+      );
+
+      if (result['success']) {
+        final data = result['data'];
+        _user = User.fromJson(data['user']);
+
+        // Storage'ı güncelle
+        await _storageService.saveUserInfo(
+          userId: _user!.id,
+          email: _user!.email,
+          name: _user!.name,
+        );
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Change password
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    if (_user == null) return false;
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.changePassword(
+        _user!.id,
+        currentPassword,
+        newPassword,
+      );
+
+      if (result['success']) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Upload profile photo
+  Future<bool> uploadProfilePhoto(File imageFile) async {
+    if (_user == null) {
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.uploadProfilePhoto(_user!.id, imageFile);
+
+      if (result['success']) {
+        // Update user's photo path
+        // Backend response: {success: true, data: {success: true, data: {photoPath: ...}}}
+        final responseData = result['data'];
+        final photoPath = responseData['data'] != null
+            ? responseData['data']['photoPath']
+            : responseData['photoPath'];
+
+        _user = _user!.copyWith(profileImage: photoPath);
+
+        // Save to storage
+        await _storageService.saveUserInfo(
+          userId: _user!.id,
+          email: _user!.email,
+          name: _user!.name,
+        );
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Delete profile photo
+  Future<bool> deleteProfilePhoto() async {
+    if (_user == null) {
+      return false;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _apiService.deleteProfilePhoto(_user!.id);
+
+      if (result['success']) {
+        // Update user's photo path to null
+        _user = _user!.copyWith(clearProfileImage: true);
+
+        // Save to storage
+        await _storageService.saveUserInfo(
+          userId: _user!.id,
+          email: _user!.email,
+          name: _user!.name,
+        );
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Bir hata oluştu: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 }

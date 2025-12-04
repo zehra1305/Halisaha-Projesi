@@ -48,6 +48,7 @@ class User {
     String? email,
     String? phone,
     String? profileImage,
+    bool clearProfileImage = false,
     DateTime? createdAt,
   }) {
     return User(
@@ -55,7 +56,9 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone ?? this.phone,
-      profileImage: profileImage ?? this.profileImage,
+      profileImage: clearProfileImage
+          ? null
+          : (profileImage ?? this.profileImage),
       createdAt: createdAt ?? this.createdAt,
     );
   }
