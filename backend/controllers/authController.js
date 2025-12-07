@@ -14,6 +14,32 @@ function hashPassword(password) {
     return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+// JWT Token oluştur
+function generateToken(userId, email, expiresIn) {
+    // Header oluştur
+    const header = Buffer.from(JSON.stringify({ 
+        alg: 'HS256', 
+        typ: 'JWT' 
+    })).toString('base64');
+    
+    // Payload oluştur (kullanıcı bilgileri + geçerlilik süresi)
+    const payload = Buffer.from(JSON.stringify({
+        userId,
+        email,
+        iat: Math.floor(Date.now() / 1000),           // Oluşturulma zamanı
+        exp: Math.floor(Date.now() / 1000) + expiresIn, // Dinamik süre
+    })).toString('base64');
+    
+    // İmza oluştur
+    const signature = crypto
+        .createHmac('sha256', process.env.JWT_SECRET || 'your-secret-key')
+        .update(`${header}.${payload}`)
+        .digest('base64');
+    
+    // Token döndür: Header.Payload.Signature formatında
+    return `${header}.${payload}.${signature}`;
+}
+
 // Kayıt olma
 exports.register = async (req, res) => {
     try {
@@ -100,7 +126,7 @@ exports.register = async (req, res) => {
 // Giriş yapma
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
 
         // Validasyon
         if (!email || !password) {
@@ -139,11 +165,14 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Token oluştur
-        const token = `token-${user.kullanici_id}-${Date.now()}`;
+        // Token oluştur: rememberMe true ise 1 yıl (365 gün), false ise 1 gün
+        const expiresIn = rememberMe ? (365 * 24 * 60 * 60) : (24 * 60 * 60);
+        const token = generateToken(user.kullanici_id, user.email, expiresIn);
 
         // Başarılı giriş
         return res.status(200).json({
+            success: true,
+            message: 'Giriş başarılı',
             token,
             user: {
                 id: user.kullanici_id,

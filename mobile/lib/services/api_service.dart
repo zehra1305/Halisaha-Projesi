@@ -13,13 +13,21 @@ class ApiService {
   static const Duration timeout = Duration(seconds: 10);
 
   // Login endpoint
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  Future<Map<String, dynamic>> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     try {
       final response = await http
           .post(
             Uri.parse('$baseUrl/auth/login'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'password': password}),
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+              'rememberMe': rememberMe,
+            }),
           )
           .timeout(timeout);
 

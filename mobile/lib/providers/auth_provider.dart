@@ -27,13 +27,21 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   // Login
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final result = await _apiService.login(email, password);
+      final result = await _apiService.login(
+        email,
+        password,
+        rememberMe: rememberMe,
+      );
 
       if (result['success']) {
         final data = result['data'];
