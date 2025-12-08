@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'sayfalar/ilanlar.dart';
+// ESKİ SATIR: import 'sayfalar/ilanlar.dart';  <-- Artık bu dosya yok
+import 'sayfalar/ilanlar_page.dart'; // YENİ YOL: IlanlarPage artık burada
 
 void main() {
   runApp(const MyApp());
