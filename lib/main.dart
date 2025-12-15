@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'firebase_options.dart';
+import 'providers/auth_provider.dart';
+import 'screens/profile/profile_screen.dart';
+import 'sayfalar/ilanlar_page.dart'; // IlanlarPage import edildi
 
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-class UpcomingMatch {
-  final String date;
-  final String? details;
-
-  UpcomingMatch({
-    required this.date,
-    this.details,
-  });
-}
-
-void main() {
-  runApp(const RuyaHalisahaApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: const RuyaHalisahaApp(),
+    ),
+  );
 }
 
 class RuyaHalisahaApp extends StatelessWidget {
@@ -41,10 +48,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
-  final UpcomingMatch _upcomingMatch = UpcomingMatch(
-    date: "14 Kasım 16:00",
-    details: "Detaylar",
-  );
 
   void _onItemTapped(int index) {
     setState(() {
@@ -56,216 +59,39 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     const Color mainGreen = Color(0xFF388E3C);
 
+    Widget body;
+    switch (_selectedIndex) {
+      case 0:
+        body = _buildHome(mainGreen);
+        break;
+      case 1: // İlanlar butonu için doğru sayfa yönlendirmesi
+        body = const IlanlarPage();
+        break;
+      case 2:
+        body = const Center(
+          child: Text(
+            "Randevu Sayfası (Yakında)",
+            style: TextStyle(fontSize: 18),
+          ),
+        );
+        break;
+      case 3:
+        body = const ProfileScreen(); // PROFİL SAYFASI
+        break;
+      default:
+        body = _buildHome(mainGreen);
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      children: [
-                        Container(
-                          color: mainGreen,
-                          padding: const EdgeInsets.only(top: 50, left: 16, right: 16, bottom: 20),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 45,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                      child: const TextField(
-                                        decoration: InputDecoration(
-                                          hintText: "Ara",
-                                          hintStyle: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.bold),
-                                          prefixIcon: Icon(Icons.search, color: Colors.grey, size: 28),
-                                          border: InputBorder.none,
-                                          contentPadding: EdgeInsets.symmetric(vertical: 10),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  // Mesajlaşma butonu
-                                  Container(
-                                    width: 45,
-                                    height: 45,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.message_outlined,
-                                        color: Colors.black87,
-                                        size: 24,
-                                      ),
-                                      onPressed: () {
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                "Rüya Halısaha",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Text(
-                                "Rüya gibi futbol.",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Slider
-                        Stack(
-                          alignment: Alignment.topCenter,
-                          children: [
-                            Container(
-                              height: 50,
-                              color: mainGreen,
-                            ),
-                            SizedBox(
-                              height: 200,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: PageView.builder(
-                                  controller: PageController(viewportFraction: 1.0),
-                                  itemCount: 3,
-                                  itemBuilder: (context, index) {
-                                    return Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 20),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(20),
-                                        image: const DecorationImage(
-                                          image: AssetImage("lib/assets/ruya.jpg"),
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 5),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Yaklaşan Maçın",
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 10),
-                          Container(
-                            padding: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: mainGreen, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.3),
-                                  spreadRadius: 2,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Backend'den veri gelene kadar boş
-                                const SizedBox(),
-                                const Icon(
-                                  Icons.sports_soccer,
-                                  size: 50,
-                                  color: Color(0xFF263238),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // --- 3. GRUP: DUYURULAR ---
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(left: 10.0, bottom: 10.0),
-                            child: Text(
-                              "Duyurular",
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.arrow_back_ios, size: 16, color: Colors.black),
-                              Expanded(
-                                child: _buildInfoCard(
-                                  icon: Icons.school_outlined,
-                                  text: "Spor okulu\nkayıtları başladı.\n-Detaylar için tıkla.",
-                                  borderColor: mainGreen,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInfoCard(
-                                  icon: Icons.emoji_events_outlined,
-                                  text: "Turnuva başladı.\n-Detaylar için tıkla.",
-                                  borderColor: mainGreen,
-                                ),
-                              ),
-                              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+      body: SafeArea(child: body),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
         backgroundColor: mainGreen,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black87,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.black54,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined, size: 30),
@@ -277,7 +103,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined, size: 30),
-            label: 'Randevu Ekle',
+            label: 'Randevu',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline, size: 30),
@@ -288,22 +114,189 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildInfoCard({required IconData icon, required String text, required Color borderColor}) {
+  // ---------------- ANA SAYFA GÖVDESİ ----------------
+  Widget _buildHome(Color mainGreen) {
+    return Column(
+      children: [
+        _buildHeader(mainGreen),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              const SizedBox(height: 20),
+              _buildSlider(mainGreen),
+              const SizedBox(height: 20),
+              _buildUpcomingMatch(mainGreen),
+              const SizedBox(height: 20),
+              _buildAnnouncements(mainGreen),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------- HEADER ----------------
+  Widget _buildHeader(Color mainGreen) {
+    return Container(
+      color: mainGreen,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 25),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const TextField(
+                    decoration: InputDecoration(
+                      hintText: "Ara",
+                      prefixIcon: Icon(Icons.search),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              CircleAvatar(
+                backgroundColor: Colors.white,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.message_outlined,
+                    color: Colors.black87,
+                  ),
+                  onPressed: () {
+                    // Mesajlar sayfasına yönlendirme eklenebilir.
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "Rüya Halısaha",
+            style: TextStyle(color: Colors.white, fontSize: 24),
+          ),
+          const Text(
+            "Rüya gibi futbol.",
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------- SLIDER ----------------
+  Widget _buildSlider(Color mainGreen) {
+    return SizedBox(
+      height: 200,
+      child: PageView.builder(
+        controller: PageController(viewportFraction: 0.9),
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              image: const DecorationImage(
+                image: AssetImage("assets/ruya.jpg"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------- YAKLAŞAN MAÇ ----------------
+  Widget _buildUpcomingMatch(Color mainGreen) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Yaklaşan Maçın",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: mainGreen, width: 2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text("14 Kasım 16:00", style: TextStyle(fontSize: 16)),
+                Icon(Icons.sports_soccer, size: 50),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------- DUYURULAR ----------------
+  Widget _buildAnnouncements(Color mainGreen) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 10, bottom: 10),
+            child: Text(
+              "Duyurular",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfoCard(
+                  icon: Icons.school_outlined,
+                  text: "Spor okulu\nkayıtları başladı.",
+                  borderColor: mainGreen,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildInfoCard(
+                  icon: Icons.emoji_events_outlined,
+                  text: "Turnuva başladı.",
+                  borderColor: mainGreen,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------- İNFO KART ----------------
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String text,
+    required Color borderColor,
+  }) {
     return Container(
       height: 140,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -313,11 +306,7 @@ class _HomePageState extends State<HomePage> {
           Text(
             text,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: Colors.black,
-            ),
+            style: const TextStyle(fontSize: 14),
           ),
         ],
       ),
