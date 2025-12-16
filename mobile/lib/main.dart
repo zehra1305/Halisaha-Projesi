@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/randevu/randevu_page.dart';
+import 'screens/ilanlar/ilanlar_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +45,10 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const LoginScreen(),
+        routes:{
+          '/randevu':(context) => const RandevuPage(),
+          '/ilan':(context) => const IlanlarPage(),
+        },
       ),
     );
   }
