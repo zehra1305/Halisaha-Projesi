@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../providers/auth_provider.dart';
-import '../home/home_screen.dart';
+import '../home_page.dart'; // YENİ: Gerçek Anasayfa (HomePage) import edildi
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -50,7 +50,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
+    print('Kayıt İşlemi Başlatıldı...'); // DEBUG
+    
+    // 1. Koşul Kontrolleri
     if (!_acceptTerms) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen kullanım koşullarını kabul edin')),
       );
@@ -58,6 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (!_acceptKVKK) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen KVKK metnini kabul edin')),
       );
@@ -65,8 +70,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (_formKey.currentState!.validate()) {
+      print('DEBUG: Form Doğrulaması Başarılı. API çağrılıyor...');
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
+      // 2. Kayıt İşlemi
       final success = await authProvider.register(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
@@ -74,24 +81,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
 
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Kayıt başarılı!')));
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.errorMessage ?? 'Kayıt başarısız'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      if (!mounted) return; // Async sonrası BuildContext kontrolü
+
+      // 3. Sonuç Kontrolü
+      if (success) {
+        print('DEBUG: API Başarılı. HomePage\'e yönlendiriliyor...');
+        // BAŞARILI: Mesaj göster ve Anasayfaya yönlendir
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kayıt başarılı! Giriş yapılıyor...'), backgroundColor: Color(0xFF3BB54A)));
+        
+        // YÖNLENDİRMEYİ GERÇEK ANASAYFAYA (HomePage) YAPIYORUZ
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()), // Yönlendirme sınıfı HomePage olarak ayarlandı
+        );
+      } else {
+        print('DEBUG: API Başarısız. Hata: ${authProvider.errorMessage}');
+        // BAŞARISIZ: Hata mesajını göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage ?? 'Kayıt başarısız'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } else {
+      print('DEBUG: Form Alanlarında Hata Var (Validate başarısız).');
     }
   }
 
@@ -387,7 +403,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onPressed: () {
                               setState(() {
                                 _obscurePassword = !_obscurePassword;
-                              });
+                              }
+                              );
                             },
                           ),
                           filled: true,
@@ -442,7 +459,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               setState(() {
                                 _obscureConfirmPassword =
                                     !_obscureConfirmPassword;
-                              });
+                              }
+                              );
                             },
                           ),
                           filled: true,
@@ -472,7 +490,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onChanged: (value) {
                               setState(() {
                                 _acceptTerms = value ?? false;
-                              });
+                              }
+                              );
                             },
                           ),
                           Expanded(
@@ -512,7 +531,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onChanged: (value) {
                               setState(() {
                                 _acceptKVKK = value ?? false;
-                              });
+                              }
+                              );
                             },
                           ),
                           Expanded(
@@ -616,4 +636,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-}
+  }
