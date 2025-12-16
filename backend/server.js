@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 3001;
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const profileRoutesNew = require('./routes/profileRoutes');
+const ilanlarRoutes = require('./routes/ilanlar');
+const randevularRoutes = require('./routes/randevular');
 
 // Middleware
 app.use(cors());
@@ -63,6 +65,12 @@ app.use('/api/profile', profileRoutes);
 
 // Profile routes (Session-based)
 app.use('/api', profileRoutesNew);
+
+// İlanlar routes
+app.use('/api/ilanlar', ilanlarRoutes);
+
+// Randevular routes
+app.use('/api/randevular', randevularRoutes);
 
 // Sunucuyu başlat
 app.listen(PORT, () => {
