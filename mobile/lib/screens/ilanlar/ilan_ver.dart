@@ -20,6 +20,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
   final TextEditingController _tarihController = TextEditingController();
 
   String? _secilenSaat;
+  int? _secilenOyuncuSayisi;
 
   final TextEditingController _sayiController = TextEditingController();
   final TextEditingController _ucretController = TextEditingController();
@@ -28,8 +29,8 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
 
   String? secilenKonum = "Rüya Halı Saha - Kayseri";
 
-  final List<String> saatSecenekleri = List.generate(7, (index) {
-    int hour = 17 + index;
+  final List<String> saatSecenekleri = List.generate(12, (index) {
+    int hour = 12 + index;
     return '${hour.toString().padLeft(2, '0')}:00';
   });
 
@@ -41,7 +42,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
   String? secilenSeviye;
   final List<String> seviyeler = ['Başlangıç', 'Orta', 'İyi', 'Profesyonel'];
 
-  // TARİH SEÇİMİ (DD/MM/YYYY formatında kaydedilir)
+  // TARİH SEÇİMİ (YYYY-MM-DD formatında kaydedilir - backend için)
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -51,8 +52,9 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
     );
     if (picked != null) {
       setState(() {
+        // Backend için YYYY-MM-DD formatı
         _tarihController.text =
-            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -148,6 +150,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                             hintText: "Saat",
                           ),
                           isExpanded: true,
+                          menuMaxHeight: 250,
                           items: saatSecenekleri.map((String saat) {
                             return DropdownMenuItem<String>(
                               value: saat,
@@ -169,7 +172,38 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
               ),
 
               buildLabel("Aranan Oyuncu Sayısı"),
-              buildInputBox(controller: _sayiController, isNumber: true),
+              Container(
+                decoration: BoxDecoration(
+                  color: inputGrey,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 15),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButtonFormField<int>(
+                    value: _secilenOyuncuSayisi,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 15),
+                      hintText: "Seçiniz",
+                    ),
+                    isExpanded: true,
+                    menuMaxHeight: 250,
+                    items: List.generate(16, (index) => index + 1)
+                        .map(
+                          (sayi) => DropdownMenuItem<int>(
+                            value: sayi,
+                            child: Text(sayi.toString()),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _secilenOyuncuSayisi = val;
+                      });
+                    },
+                  ),
+                ),
+              ),
 
               buildLabel("Mevki"),
               Row(
@@ -312,24 +346,23 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                         context,
                         listen: false,
                       );
-                      final userId = authProvider.user?.id ?? '';
+                      final userId = authProvider.user?.id;
 
                       final yeniIlan = IlanModel(
-                        id: '',
-                        adSoyad: _adController.text,
-                        yas: _yasController.text,
                         baslik: _baslikController.text,
-                        konum: secilenKonum!,
+                        aciklama: _aciklamaController.text,
                         tarih: _tarihController.text,
                         saat: _secilenSaat!,
-                        kisiSayisi: _sayiController.text,
-                        mevki: mevkiler.join(", "),
-                        seviye: secilenSeviye ?? "Belirtilmedi",
-                        ucret: _ucretController.text.isEmpty
-                            ? "Ücretsiz"
-                            : "${_ucretController.text} TL",
-                        aciklama: _aciklamaController.text,
-                        userId: userId,
+                        konum: secilenKonum!,
+                        kisiSayisi: _secilenOyuncuSayisi,
+                        mevki: mevkiler.isNotEmpty ? mevkiler.join(", ") : null,
+                        seviye: secilenSeviye,
+                        ucret: _ucretController.text.isNotEmpty
+                            ? "${_ucretController.text} TL"
+                            : null,
+                        kullaniciId: userId != null
+                            ? int.tryParse(userId)
+                            : null,
                       );
 
                       Navigator.pop(context, yeniIlan);

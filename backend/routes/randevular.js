@@ -6,6 +6,7 @@ const randevuController = require('../controllers/randevuController');
 router.post('/', randevuController.createRandevu);
 router.get('/kullanici/:userId', randevuController.getRandevularByUser);
 router.get('/yaklasan/:userId', randevuController.getYaklasanRandevu);
+router.get('/yaklasanlar/:userId', randevuController.getYaklasanRandevular);
 router.get('/musait-saatler', randevuController.getMusaitSaatler);
 router.delete('/:id', randevuController.cancelRandevu);
 

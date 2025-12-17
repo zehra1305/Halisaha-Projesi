@@ -49,7 +49,6 @@ const createRandevu = async (req, res) => {
         saat_baslangic as "saatBaslangic",
         saat_bitis as "saatBitis",
         durum,
-        saha,
         telefon,
         aciklama,
         olusturma_tarihi as "olusturmaTarihi"
@@ -92,11 +91,9 @@ const getRandevularByUser = async (req, res) => {
         saat_baslangic as "saatBaslangic",
         saat_bitis as "saatBitis",
         durum,
-        saha,
         telefon,
         aciklama,
-        olusturma_tarihi as "olusturmaTarihi",
-        guncelleme_tarihi as "guncellemeTarihi"
+        olusturma_tarihi as "olusturmaTarihi"
       FROM randevular 
       WHERE kullanici_id = $1 
       ORDER BY tarih DESC, saat_baslangic DESC
@@ -154,6 +151,46 @@ const getYaklasanRandevu = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Yaklaşan randevu getirilirken hata oluştu',
+    });
+  }
+};
+
+// Tüm yaklaşan onaylı randevuları getir (anasayfa için)
+const getYaklasanRandevular = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const query = `
+      SELECT 
+        randevu_id as "randevuId",
+        kullanici_id as "kullaniciId",
+        tarih,
+        saat_baslangic as "saatBaslangic",
+        saat_bitis as "saatBitis",
+        durum,
+        saha,
+        telefon,
+        aciklama
+      FROM randevular 
+      WHERE kullanici_id = $1 
+      AND durum = 'onaylandi'
+      AND tarih >= CURRENT_DATE
+      AND (tarih > CURRENT_DATE OR 
+           (tarih = CURRENT_DATE AND saat_baslangic > CURRENT_TIME))
+      ORDER BY tarih ASC, saat_baslangic ASC
+    `;
+
+    const result = await pool.query(query, [userId]);
+
+    res.status(200).json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error('Yaklaşan randevular getirme hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Yaklaşan randevular getirilirken hata oluştu',
     });
   }
 };
@@ -263,11 +300,10 @@ const getAllRandevularAdmin = async (req, res) => {
         r.saat_baslangic as "saatBaslangic",
         r.saat_bitis as "saatBitis",
         r.durum,
-        r.saha,
         r.telefon,
         r.aciklama,
         r.olusturma_tarihi as "olusturmaTarihi",
-        k.ad_soyad as "kullaniciAdi",
+        CONCAT(k.ad, ' ', k.soyad) as "kullaniciAdi",
         k.email as "kullaniciEmail"
       FROM randevular r
       LEFT JOIN kullanici k ON r.kullanici_id = k.kullanici_id
@@ -336,6 +372,7 @@ module.exports = {
   createRandevu,
   getRandevularByUser,
   getYaklasanRandevu,
+  getYaklasanRandevular,
   getMusaitSaatler,
   cancelRandevu,
   getAllRandevularAdmin,

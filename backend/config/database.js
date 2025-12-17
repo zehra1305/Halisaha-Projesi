@@ -1,33 +1,46 @@
-const { Client } = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-const db = new Client({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'postgres',
-    port: parseInt(process.env.DB_PORT) || 5432,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || 'halisaha_proje_db'
-});
+// DATABASE_URL varsa onu kullan, yoksa parametreleri kullan
+const connectionString = process.env.DATABASE_URL;
 
-// Veritabanı bağlantısını kur
-db.connect((err) => {
+const pool = new Pool(
+    connectionString 
+    ? { 
+        connectionString, 
+        ssl: { rejectUnauthorized: false },
+        // Session pooler için önemli
+        max: 20, // Maximum pool connections
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+    }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'postgres',
+        port: parseInt(process.env.DB_PORT) || 5432,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME || 'halisaha_proje_db',
+        ssl: false
+    }
+);
+
+// Test bağlantısı
+pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error('❌ Veritabanı bağlantı hatası:', err.message);
-        console.error('Detaylar:', {
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            port: process.env.DB_PORT,
-            database: process.env.DB_NAME
-        });
     } else {
-        console.log('Veritabanına başarıyla bağlandı');
-        console.log(` Bağlı: ${process.env.DB_USER}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+        console.log('✓ Veritabanına başarıyla bağlandı');
+        if (connectionString) {
+            console.log('→ Bağlantı: DATABASE_URL kullanılıyor (Supabase)');
+        } else {
+            console.log(`→ Bağlı: ${process.env.DB_USER}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+        }
     }
 });
 
 // Connection error handling
-db.on('error', (err) => {
-    console.error(' Veritabanı runtime hatası:', err.message);
+pool.on('error', (err) => {
+    console.error('⚠ Veritabanı runtime hatası:', err.message);
 });
 
-module.exports = db;
+module.exports = pool;

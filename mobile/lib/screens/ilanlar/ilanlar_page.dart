@@ -93,6 +93,20 @@ class _IlanlarPageState extends State<IlanlarPage> {
     );
   }
 
+  String _formatDateTime(IlanModel ilan) {
+    try {
+      final dateTime = ilan.fullDateTime;
+      final day = dateTime.day.toString().padLeft(2, '0');
+      final month = dateTime.month.toString().padLeft(2, '0');
+      final year = dateTime.year;
+      final hour = dateTime.hour.toString().padLeft(2, '0');
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+      return '$day/$month/$year $hour:$minute';
+    } catch (e) {
+      return '${ilan.tarih} ${ilan.saat}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading && ilanListesi.isEmpty) {
@@ -272,6 +286,11 @@ class _IlanlarPageState extends State<IlanlarPage> {
   }
 
   Widget _buildIlanCard(IlanModel ilan) {
+    final kullaniciAdi = ilan.kullaniciAdi ?? 'U';
+    final initial = kullaniciAdi.isNotEmpty
+        ? kullaniciAdi[0].toUpperCase()
+        : 'U';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       padding: const EdgeInsets.all(10),
@@ -282,18 +301,50 @@ class _IlanlarPageState extends State<IlanlarPage> {
       ),
       child: Row(
         children: [
-          Stack(
-            children: [
-              Container(
-                width: 75,
-                height: 75,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black, width: 2),
-                ),
-                child: const Icon(Icons.person, size: 50, color: Colors.black),
-              ),
-            ],
+          Container(
+            width: 75,
+            height: 75,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.black, width: 2),
+            ),
+            child: ClipOval(
+              child:
+                  ilan.profilFotografi != null &&
+                      ilan.profilFotografi!.isNotEmpty
+                  ? Image.network(
+                      'http://10.0.2.2:3001${ilan.profilFotografi}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: _mainGreen,
+                          child: Center(
+                            child: Text(
+                              initial,
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      color: _mainGreen,
+                      child: Center(
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
           ),
           const SizedBox(width: 15),
           Expanded(
@@ -315,29 +366,31 @@ class _IlanlarPageState extends State<IlanlarPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        SizedBox(
-                          width: 100,
-                          child: Text(
-                            ilan.konum.toUpperCase(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: Colors.grey,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              ilan.konum.toUpperCase(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
-                      "${ilan.tarih} - ${ilan.saat}",
+                      _formatDateTime(ilan),
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 12,

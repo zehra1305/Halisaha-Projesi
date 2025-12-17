@@ -20,7 +20,7 @@ exports.getProfile = async (req, res) => {
         }
 
         const result = await db.query(
-            'SELECT kullanici_id, email, ad, soyad, telefon, kayit_tarihi FROM kullanici WHERE kullanici_id = $1',
+            'SELECT kullanici_id, email, ad, soyad, telefon, profil_fotografi, kayit_tarihi FROM kullanici WHERE kullanici_id = $1',
             [userId]
         );
 
@@ -34,7 +34,7 @@ exports.getProfile = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            user: {
+            data: {
                 id: user.kullanici_id,
                 name: `${user.ad} ${user.soyad}`.trim(),
                 email: user.email,

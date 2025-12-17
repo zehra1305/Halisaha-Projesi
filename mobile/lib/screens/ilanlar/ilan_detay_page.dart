@@ -24,14 +24,15 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
   }
 
   Future<void> _loadUserProfile() async {
-    if (widget.ilan.userId != null && widget.ilan.userId!.isNotEmpty) {
+    if (widget.ilan.kullaniciId != null) {
       try {
         final response = await ApiService.instance.getProfile(
-          widget.ilan.userId!,
+          widget.ilan.kullaniciId.toString(),
         );
         if (response['success'] == true && response['data'] != null) {
+          final data = response['data']['data'] ?? response['data'];
           setState(() {
-            _profileImageUrl = response['data']['profileImage'];
+            _profileImageUrl = data['profileImage'];
             _isLoadingProfile = false;
           });
         } else {
@@ -48,6 +49,20 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
       setState(() {
         _isLoadingProfile = false;
       });
+    }
+  }
+
+  String _formatDateTime() {
+    try {
+      final dateTime = widget.ilan.fullDateTime;
+      final day = dateTime.day.toString().padLeft(2, '0');
+      final month = dateTime.month.toString().padLeft(2, '0');
+      final year = dateTime.year;
+      final hour = dateTime.hour.toString().padLeft(2, '0');
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+      return '$day/$month/$year $hour:$minute';
+    } catch (e) {
+      return '${widget.ilan.tarih} ${widget.ilan.saat}';
     }
   }
 
@@ -93,14 +108,10 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                         'http://10.0.2.2:3001$_profileImageUrl',
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.person,
-                            size: 70,
-                            color: Colors.black,
-                          );
+                          return _buildInitialAvatar();
                         },
                       )
-                    : const Icon(Icons.person, size: 70, color: Colors.black),
+                    : _buildInitialAvatar(),
               ),
             ),
             const SizedBox(height: 20),
@@ -119,27 +130,33 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                   ),
                   const SizedBox(height: 15),
                   _buildDetailRow(Icons.location_on, widget.ilan.konum),
-                  _buildDetailRow(
-                    Icons.calendar_today,
-                    "${widget.ilan.tarih} ${widget.ilan.saat}",
-                  ),
-                  _buildDetailRow(
-                    Icons.people,
-                    "${widget.ilan.kisiSayisi} OYUNCU ARANIYOR",
-                  ),
-                  _buildDetailRow(
-                    Icons.person,
-                    widget.ilan.mevki.toUpperCase(),
-                  ),
-                  _buildDetailRow(Icons.star, widget.ilan.seviye.toUpperCase()),
-                  _buildDetailRow(Icons.monetization_on, widget.ilan.ucret),
+                  _buildDetailRow(Icons.calendar_today, _formatDateTime()),
+                  if (widget.ilan.kisiSayisi != null)
+                    _buildDetailRow(
+                      Icons.people,
+                      '${widget.ilan.kisiSayisi} Oyuncu Aranıyor',
+                    ),
+                  if (widget.ilan.mevki != null &&
+                      widget.ilan.mevki!.isNotEmpty)
+                    _buildDetailRow(Icons.person, widget.ilan.mevki!),
+                  if (widget.ilan.seviye != null &&
+                      widget.ilan.seviye!.isNotEmpty)
+                    _buildDetailRow(Icons.star, widget.ilan.seviye!),
+                  if (widget.ilan.ucret != null &&
+                      widget.ilan.ucret!.isNotEmpty)
+                    _buildDetailRow(Icons.monetization_on, widget.ilan.ucret!),
 
                   const SizedBox(height: 15),
-                  Text(
-                    widget.ilan.aciklama,
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 20),
+                  if (widget.ilan.aciklama.isNotEmpty)
+                    Text(
+                      widget.ilan.aciklama,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  if (widget.ilan.aciklama.isNotEmpty)
+                    const SizedBox(height: 20),
 
                   // Harita / Yol Tarifi Kısmı
                   GestureDetector(
@@ -215,10 +232,10 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                                   'http://10.0.2.2:3001$_profileImageUrl',
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.person, size: 24);
+                                    return _buildSmallInitialAvatar();
                                   },
                                 )
-                              : const Icon(Icons.person, size: 24),
+                              : _buildSmallInitialAvatar(),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -226,7 +243,8 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.ilan.adSoyad.toUpperCase(),
+                            (widget.ilan.kullaniciAdi ?? 'Bilinmeyen Kullanıcı')
+                                .toUpperCase(),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const Text(
@@ -273,6 +291,50 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Büyük profil resmi için baş harf avatarı
+  Widget _buildInitialAvatar() {
+    final kullaniciAdi = widget.ilan.kullaniciAdi ?? 'U';
+    final initial = kullaniciAdi.isNotEmpty
+        ? kullaniciAdi[0].toUpperCase()
+        : 'U';
+
+    return Container(
+      color: _mainGreen,
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Küçük profil resmi için baş harf avatarı
+  Widget _buildSmallInitialAvatar() {
+    final kullaniciAdi = widget.ilan.kullaniciAdi ?? 'U';
+    final initial = kullaniciAdi.isNotEmpty
+        ? kullaniciAdi[0].toUpperCase()
+        : 'U';
+
+    return Container(
+      color: _mainGreen,
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );

@@ -14,9 +14,6 @@ router.get('/:id', ilanController.getIlanById);
 // Yeni ilan oluştur
 router.post('/', ilanController.createIlan);
 
-// İlan güncelle
-router.put('/:id', ilanController.updateIlan);
-
 // İlan sil
 router.delete('/:id', ilanController.deleteIlan);
 

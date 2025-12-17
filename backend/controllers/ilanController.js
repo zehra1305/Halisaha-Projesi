@@ -5,22 +5,23 @@ exports.getAllIlanlar = async (req, res) => {
     try {
         const result = await db.query(`
             SELECT 
-                ilan_id as id,
-                ad_soyad as "adSoyad",
-                baslik,
-                konum,
-                tarih,
-                saat,
-                kisi_sayisi as "kisiSayisi",
-                mevki,
-                seviye,
-                ucret,
-                aciklama,
-                yas,
-                kullanici_id as "userId",
-                olusturma_tarihi as "olusturmaTarihi"
-            FROM ilanlar 
-            ORDER BY olusturma_tarihi DESC
+                i.ilan_id,
+                i.baslik,
+                i.aciklama,
+                i.tarih,
+                i.saat,
+                i.konum,
+                i.kisi_sayisi,
+                i.mevki,
+                i.seviye,
+                i.ucret,
+                i.kullanici_id,
+                i.olusturma_tarihi,
+                CONCAT(k.ad, ' ', k.soyad) as kullanici_adi,
+                k.profil_fotografi
+            FROM ilanlar i
+            LEFT JOIN kullanici k ON i.kullanici_id = k.kullanici_id
+            ORDER BY i.olusturma_tarihi DESC
         `);
 
         return res.status(200).json(result.rows);
@@ -40,22 +41,24 @@ exports.getIlanById = async (req, res) => {
 
         const result = await db.query(`
             SELECT 
-                ilan_id as id,
-                ad_soyad as "adSoyad",
-                baslik,
-                konum,
-                tarih,
-                saat,
-                kisi_sayisi as "kisiSayisi",
-                mevki,
-                seviye,
-                ucret,
-                aciklama,
-                yas,
-                kullanici_id as "userId",
-                olusturma_tarihi as "olusturmaTarihi"
-            FROM ilanlar 
-            WHERE ilan_id = $1
+                i.ilan_id,
+                i.baslik,
+                i.aciklama,
+                i.tarih,
+                i.saat,
+                i.konum,
+                i.kisi_sayisi,
+                i.mevki,
+                i.seviye,
+                i.ucret,
+                i.kullanici_id,
+                i.olusturma_tarihi,
+                CONCAT(k.ad, ' ', k.soyad) as kullanici_adi,
+                k.profil_fotografi,
+                k.telefon
+            FROM ilanlar i
+            LEFT JOIN kullanici k ON i.kullanici_id = k.kullanici_id
+            WHERE i.ilan_id = $1
         `, [id]);
 
         if (result.rows.length === 0) {
@@ -77,26 +80,24 @@ exports.getIlanById = async (req, res) => {
 // Yeni ilan oluştur
 exports.createIlan = async (req, res) => {
     try {
-        console.log('Gelen ilan verisi:', req.body);
+        console.log('İlan oluşturma isteği:', req.body);
         
         const {
-            adSoyad,
             baslik,
-            konum,
+            aciklama,
             tarih,
             saat,
+            konum,
             kisiSayisi,
             mevki,
             seviye,
             ucret,
-            aciklama,
-            yas,
-            userId
+            kullaniciId
         } = req.body;
 
-        // Zorunlu alanları kontrol et
-        if (!adSoyad || !baslik || !konum || !tarih || !saat || !kisiSayisi || !mevki) {
-            console.log('Eksik alanlar:', { adSoyad, baslik, konum, tarih, saat, kisiSayisi, mevki });
+        // Zorunlu alanları kontrol et (açıklama, kisiSayisi, mevki, seviye, ucret opsiyonel)
+        if (!baslik || !tarih || !saat || !konum || !kullaniciId) {
+            console.log('Eksik alanlar:', { baslik, tarih, saat, konum, kullaniciId });
             return res.status(400).json({ 
                 message: 'Zorunlu alanlar eksik' 
             });
@@ -104,108 +105,26 @@ exports.createIlan = async (req, res) => {
 
         const result = await db.query(`
             INSERT INTO ilanlar (
-                ad_soyad, 
                 baslik, 
-                konum, 
+                aciklama, 
                 tarih, 
                 saat, 
-                kisi_sayisi, 
-                mevki, 
-                seviye, 
-                ucret, 
-                aciklama, 
-                yas, 
-                kullanici_id
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            RETURNING 
-                ilan_id as id,
-                ad_soyad as "adSoyad",
-                baslik,
                 konum,
-                tarih,
-                saat,
-                kisi_sayisi as "kisiSayisi",
+                kisi_sayisi,
                 mevki,
                 seviye,
                 ucret,
-                aciklama,
-                yas,
-                kullanici_id as "userId",
-                olusturma_tarihi as "olusturmaTarihi"
-        `, [adSoyad, baslik, konum, tarih, saat, kisiSayisi, mevki, seviye, ucret, aciklama, yas, userId]);
+                kullanici_id
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING *
+        `, [baslik, aciklama || null, tarih, saat, konum, kisiSayisi || null, mevki || null, seviye || null, ucret || null, kullaniciId]);
 
         return res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('İlan oluşturma hatası:', err);
         return res.status(500).json({ 
             message: 'İlan oluşturulurken hata oluştu',
-            error: err.message 
-        });
-    }
-};
-
-// İlan güncelle
-exports.updateIlan = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const {
-            adSoyad,
-            baslik,
-            konum,
-            tarih,
-            saat,
-            kisiSayisi,
-            mevki,
-            seviye,
-            ucret,
-            aciklama,
-            yas
-        } = req.body;
-
-        const result = await db.query(`
-            UPDATE ilanlar 
-            SET 
-                ad_soyad = COALESCE($1, ad_soyad),
-                baslik = COALESCE($2, baslik),
-                konum = COALESCE($3, konum),
-                tarih = COALESCE($4, tarih),
-                saat = COALESCE($5, saat),
-                kisi_sayisi = COALESCE($6, kisi_sayisi),
-                mevki = COALESCE($7, mevki),
-                seviye = COALESCE($8, seviye),
-                ucret = COALESCE($9, ucret),
-                aciklama = COALESCE($10, aciklama),
-                yas = COALESCE($11, yas)
-            WHERE ilan_id = $12
-            RETURNING 
-                ilan_id as id,
-                ad_soyad as "adSoyad",
-                baslik,
-                konum,
-                tarih,
-                saat,
-                kisi_sayisi as "kisiSayisi",
-                mevki,
-                seviye,
-                ucret,
-                aciklama,
-                yas,
-                kullanici_id as "userId",
-                olusturma_tarihi as "olusturmaTarihi"
-        `, [adSoyad, baslik, konum, tarih, saat, kisiSayisi, mevki, seviye, ucret, aciklama, yas, id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ 
-                message: 'İlan bulunamadı' 
-            });
-        }
-
-        return res.status(200).json(result.rows[0]);
-    } catch (err) {
-        console.error('İlan güncelleme hatası:', err);
-        return res.status(500).json({ 
-            message: 'İlan güncellenirken hata oluştu',
             error: err.message 
         });
     }
@@ -247,20 +166,14 @@ exports.getIlanlarByUserId = async (req, res) => {
 
         const result = await db.query(`
             SELECT 
-                ilan_id as id,
-                ad_soyad as "adSoyad",
+                ilan_id,
                 baslik,
-                konum,
+                aciklama,
                 tarih,
                 saat,
-                kisi_sayisi as "kisiSayisi",
-                mevki,
-                seviye,
-                ucret,
-                aciklama,
-                yas,
-                kullanici_id as "userId",
-                olusturma_tarihi as "olusturmaTarihi"
+                konum,
+                kullanici_id,
+                olusturma_tarihi
             FROM ilanlar 
             WHERE kullanici_id = $1
             ORDER BY olusturma_tarihi DESC

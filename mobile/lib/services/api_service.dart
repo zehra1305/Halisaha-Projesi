@@ -429,7 +429,8 @@ class ApiService {
           .timeout(timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return IlanModel.fromJson(jsonDecode(response.body));
+        final createdIlan = jsonDecode(response.body);
+        return IlanModel.fromJson(createdIlan);
       } else {
         throw Exception('İlan kaydedilemedi');
       }
@@ -510,6 +511,33 @@ class ApiService {
     } catch (e) {
       print('Yaklaşan randevu hatası: $e');
       return null;
+    }
+  }
+
+  // Tüm yaklaşan onaylı randevuları getir (anasayfa için)
+  Future<List<RandevuModel>> getYaklasanRandevular(String userId) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/randevular/yaklasanlar/$userId'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['data'] != null && data['data'] is List) {
+          return (data['data'] as List)
+              .map((item) => RandevuModel.fromJson(item))
+              .toList();
+        }
+        return [];
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Yaklaşan randevular hatası: $e');
+      return [];
     }
   }
 
