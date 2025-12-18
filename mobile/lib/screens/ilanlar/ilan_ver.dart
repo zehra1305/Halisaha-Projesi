@@ -42,6 +42,18 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
   String? secilenSeviye;
   final List<String> seviyeler = ['Başlangıç', 'Orta', 'İyi', 'Profesyonel'];
 
+  @override
+  void initState() {
+    super.initState();
+    // Kullanıcının kayıtlı adını yükle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.user != null) {
+        _adController.text = authProvider.user!.name;
+      }
+    });
+  }
+
   // TARİH SEÇİMİ (YYYY-MM-DD formatında kaydedilir - backend için)
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -79,10 +91,14 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               buildLabel("Ad Soyad"),
-              buildInputBox(controller: _adController),
+              buildInputBox(controller: _adController, readOnly: true),
 
               buildLabel("Yaş"),
-              buildInputBox(controller: _yasController, isNumber: true),
+              buildInputBox(
+                controller: _yasController,
+                isNumber: true,
+                maxLength: 2, // İki basamaklı sayı limiti eklendi
+              ),
 
               buildLabel("İlan Başlığı"),
               buildInputBox(controller: _baslikController),
@@ -274,6 +290,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                         buildInputBox(
                           controller: _ucretController,
                           isNumber: true,
+                          maxLength: 4,
                         ),
                       ],
                     ),

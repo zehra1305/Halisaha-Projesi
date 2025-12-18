@@ -28,6 +28,7 @@ Widget buildInputBox({
   bool isNumber = false,
   bool readOnly = false,
   VoidCallback? onTap,
+  int? maxLength,
 }) {
   return Container(
     decoration: BoxDecoration(
@@ -38,6 +39,7 @@ Widget buildInputBox({
       controller: controller,
       readOnly: readOnly,
       onTap: onTap,
+      maxLength: maxLength,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       inputFormatters: isNumber
           ? [FilteringTextInputFormatter.digitsOnly]
@@ -50,6 +52,7 @@ Widget buildInputBox({
         ),
         hintText: hint,
         suffixIcon: icon != null ? Icon(icon, color: Colors.black54) : null,
+        counterText: '',
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {

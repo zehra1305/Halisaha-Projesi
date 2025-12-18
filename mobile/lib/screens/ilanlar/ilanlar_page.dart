@@ -24,6 +24,8 @@ class _IlanlarPageState extends State<IlanlarPage> {
   // Hata mesajı (varsa)
   String? _errorMessage;
 
+  // ...existing code...
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +109,10 @@ class _IlanlarPageState extends State<IlanlarPage> {
     }
   }
 
+  // ...existing code...
+
+  // ...existing code...
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading && ilanListesi.isEmpty) {
@@ -149,10 +155,7 @@ class _IlanlarPageState extends State<IlanlarPage> {
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: _mainGreen,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-        onPressed: () {},
-      ),
+      automaticallyImplyLeading: false,
       title: const Text(
         "İLANLAR",
         style: TextStyle(
