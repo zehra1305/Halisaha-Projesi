@@ -13,7 +13,7 @@ import '../randevular/randevularim_page.dart';
 import '../randevular/randevu_olustur_page.dart';
 
 // YENİ EKLENEN IMPORTLAR (Dosya yollarının doğru olduğundan emin ol)
-import '../../models/duyuru.dart'; 
+import '../../models/duyuru.dart';
 import '../../services/user_api_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -82,6 +82,17 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
+  // Tarih ve saat stringlerini birleştirip DateTime döndürür
+  DateTime? _combineDateTime(String date, String time) {
+    try {
+      final dt = DateTime.parse(date);
+      return DateTime(dt.year, dt.month, dt.day);
+    } catch (e) {
+      debugPrint('Tarih parse hatası: date=$date, time=$time, error=$e');
+      return null;
+    }
+  }
+
   // Mevcut Değişkenler
   List<RandevuModel> _yaklasanRandevular = [];
   bool _isLoadingRandevu = true;
@@ -105,7 +116,7 @@ class _HomeTabState extends State<HomeTab> {
         });
       }
     });
-    
+
     // Verileri Yükle
     _loadYaklasanRandevular();
     _loadDuyurular(); // <--- Yeni Fonksiyon Çağrısı
@@ -235,9 +246,15 @@ class _HomeTabState extends State<HomeTab> {
             _buildDetayRow(
               icon: Icons.calendar_today,
               label: 'Tarih',
-              value: DateFormat(
-                'dd/MM/yyyy',
-              ).format(DateTime.parse(randevu.tarih)),
+              value: (() {
+                final matchDate = _combineDateTime(
+                  randevu.tarih,
+                  randevu.saatBaslangic,
+                );
+                return matchDate != null
+                    ? DateFormat('dd-MM-yyyy').format(matchDate)
+                    : 'Geçersiz tarih';
+              })(),
               iconColor: mainGreen,
             ),
             const SizedBox(height: 15),
@@ -718,16 +735,25 @@ class _HomeTabState extends State<HomeTab> {
                                                             CrossAxisAlignment
                                                                 .end,
                                                         children: [
-                                                          Text(
-                                                            DateFormat(
-                                                              'dd/MM/yyyy',
-                                                            ).format(
-                                                              DateTime.parse(
-                                                                randevu.tarih,
-                                                              ),
-                                                            ),
-                                                            style:
-                                                                const TextStyle(
+                                                          Builder(
+                                                            builder: (context) {
+                                                              final matchDate =
+                                                                  _combineDateTime(
+                                                                    randevu
+                                                                        .tarih,
+                                                                    randevu
+                                                                        .saatBaslangic,
+                                                                  );
+                                                              return Text(
+                                                                matchDate !=
+                                                                        null
+                                                                    ? DateFormat(
+                                                                        'dd/MM/yyyy',
+                                                                      ).format(
+                                                                        matchDate,
+                                                                      )
+                                                                    : 'Geçersiz tarih',
+                                                                style: const TextStyle(
                                                                   fontSize: 16,
                                                                   fontWeight:
                                                                       FontWeight
@@ -735,6 +761,8 @@ class _HomeTabState extends State<HomeTab> {
                                                                   color: Colors
                                                                       .black87,
                                                                 ),
+                                                              );
+                                                            },
                                                           ),
                                                           const SizedBox(
                                                             height: 3,
@@ -762,16 +790,14 @@ class _HomeTabState extends State<HomeTab> {
                                                           vertical: 6,
                                                         ),
                                                     decoration: BoxDecoration(
-                                                      gradient:
-                                                          LinearGradient(
-                                                            colors: [
-                                                              mainGreen,
-                                                              mainGreen
-                                                                  .withOpacity(
-                                                                    0.8,
-                                                                  ),
-                                                            ],
+                                                      gradient: LinearGradient(
+                                                        colors: [
+                                                          mainGreen,
+                                                          mainGreen.withOpacity(
+                                                            0.8,
                                                           ),
+                                                        ],
+                                                      ),
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                             20,
@@ -787,8 +813,8 @@ class _HomeTabState extends State<HomeTab> {
                                                             children: [
                                                               Icon(
                                                                 Icons.stadium,
-                                                                color:
-                                                                    Colors.white,
+                                                                color: Colors
+                                                                    .white,
                                                                 size: 20,
                                                               ),
                                                               const SizedBox(
@@ -887,40 +913,50 @@ class _HomeTabState extends State<HomeTab> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              
+
                               // Backend'den gelen veri durumuna göre içerik
                               _isLoadingDuyuru
-                                  ? const Center(child: CircularProgressIndicator())
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
                                   : _duyurular.isEmpty
-                                      ? Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(20),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(15),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(0.05),
-                                                blurRadius: 10,
-                                              )
-                                            ],
+                                  ? Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(15),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.05,
+                                            ),
+                                            blurRadius: 10,
                                           ),
-                                          child: const Text(
-                                            "Henüz duyuru yok.",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(color: Colors.grey),
-                                          ),
-                                        )
-                                      : ListView.separated(
-                                          shrinkWrap: true, // İç içe scroll sorunu olmasın diye
-                                          physics: const NeverScrollableScrollPhysics(),
-                                          itemCount: _duyurular.length,
-                                          separatorBuilder: (ctx, index) => const SizedBox(height: 16),
-                                          itemBuilder: (context, index) {
-                                            final duyuru = _duyurular[index];
-                                            return _buildDuyuruCard(duyuru, mainGreen);
-                                          },
-                                        ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        "Henüz duyuru yok.",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(color: Colors.grey),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      shrinkWrap:
+                                          true, // İç içe scroll sorunu olmasın diye
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: _duyurular.length,
+                                      separatorBuilder: (ctx, index) =>
+                                          const SizedBox(height: 16),
+                                      itemBuilder: (context, index) {
+                                        final duyuru = _duyurular[index];
+                                        return _buildDuyuruCard(
+                                          duyuru,
+                                          mainGreen,
+                                        );
+                                      },
+                                    ),
                             ],
                           ),
                         ),
@@ -958,7 +994,9 @@ class _HomeTabState extends State<HomeTab> {
           // Resim varsa göster
           if (duyuru.resimUrl != null && duyuru.resimUrl!.isNotEmpty)
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
               child: Image.network(
                 duyuru.resimUrl!,
                 height: 160,
@@ -967,7 +1005,7 @@ class _HomeTabState extends State<HomeTab> {
                 errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
               ),
             ),
-          
+
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -981,7 +1019,11 @@ class _HomeTabState extends State<HomeTab> {
                         color: mainColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.campaign_outlined, size: 20, color: mainColor),
+                      child: Icon(
+                        Icons.campaign_outlined,
+                        size: 20,
+                        color: mainColor,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1007,7 +1049,9 @@ class _HomeTabState extends State<HomeTab> {
                 Align(
                   alignment: Alignment.bottomRight,
                   child: Text(
-                    DateFormat('dd MMM yyyy').format(DateTime.parse(duyuru.tarih)),
+                    DateFormat(
+                      'dd-MM-yyyy',
+                    ).format(DateTime.parse(duyuru.tarih).toLocal()),
                     style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ),
