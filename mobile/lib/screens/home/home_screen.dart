@@ -85,8 +85,19 @@ class _HomeTabState extends State<HomeTab> {
   // Tarih ve saat stringlerini birleştirip DateTime döndürür
   DateTime? _combineDateTime(String date, String time) {
     try {
-      final dt = DateTime.parse(date);
-      return DateTime(dt.year, dt.month, dt.day);
+      // Backend artık "YYYY-MM-DD" formatında string dönüyor
+      final parts = date.split('-');
+      if (parts.length == 3) {
+        return DateTime(
+          int.parse(parts[0]), // year
+          int.parse(parts[1]), // month
+          int.parse(parts[2]), // day
+        );
+      }
+
+      // Eğer eski format gelirse (UTC timestamp) fallback
+      final parsedDate = DateTime.parse(date).toUtc().toLocal();
+      return DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
     } catch (e) {
       debugPrint('Tarih parse hatası: date=$date, time=$time, error=$e');
       return null;
@@ -130,8 +141,13 @@ class _HomeTabState extends State<HomeTab> {
 
   // YENİ: Duyuruları Çeken Fonksiyon
   Future<void> _loadDuyurular() async {
+    debugPrint("🔵 Duyurular yükleniyor...");
     try {
       final duyurular = await _userApiService.getDuyurular();
+      debugPrint("🟢 Duyurular alındı. Sayı: ${duyurular.length}");
+      if (duyurular.isNotEmpty) {
+        debugPrint("   İlk duyuru: ${duyurular[0].baslik}");
+      }
       if (mounted) {
         setState(() {
           _duyurular = duyurular;
@@ -139,12 +155,12 @@ class _HomeTabState extends State<HomeTab> {
         });
       }
     } catch (e) {
+      debugPrint("🔴 Duyuru çekme hatası: $e");
       if (mounted) {
         setState(() {
           _isLoadingDuyuru = false;
         });
       }
-      debugPrint("Duyuru çekme hatası: $e");
     }
   }
 
