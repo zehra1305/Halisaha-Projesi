@@ -45,7 +45,7 @@ const createRandevu = async (req, res) => {
       RETURNING 
         randevu_id as "randevuId",
         kullanici_id as "kullaniciId",
-        tarih,
+        TO_CHAR(tarih, 'YYYY-MM-DD') as tarih,
         saat_baslangic as "saatBaslangic",
         saat_bitis as "saatBitis",
         durum,
@@ -87,7 +87,7 @@ const getRandevularByUser = async (req, res) => {
       SELECT 
         randevu_id as "randevuId",
         kullanici_id as "kullaniciId",
-        tarih,
+        TO_CHAR(tarih, 'YYYY-MM-DD') as tarih,
         saat_baslangic as "saatBaslangic",
         saat_bitis as "saatBitis",
         durum,
@@ -123,7 +123,7 @@ const getYaklasanRandevu = async (req, res) => {
       SELECT 
         randevu_id as "randevuId",
         kullanici_id as "kullaniciId",
-        tarih,
+        TO_CHAR(tarih, 'YYYY-MM-DD') as tarih,
         saat_baslangic as "saatBaslangic",
         saat_bitis as "saatBitis",
         durum,
@@ -164,7 +164,7 @@ const getYaklasanRandevular = async (req, res) => {
       SELECT 
         randevu_id as "randevuId",
         kullanici_id as "kullaniciId",
-        tarih,
+        TO_CHAR(tarih, 'YYYY-MM-DD') as tarih,
         saat_baslangic as "saatBaslangic",
         saat_bitis as "saatBitis",
         durum,
@@ -296,7 +296,7 @@ const getAllRandevularAdmin = async (req, res) => {
       SELECT 
         r.randevu_id as "randevuId",
         r.kullanici_id as "kullaniciId",
-        r.tarih,
+        TO_CHAR(r.tarih, 'YYYY-MM-DD') as tarih,
         r.saat_baslangic as "saatBaslangic",
         r.saat_bitis as "saatBitis",
         r.durum,
