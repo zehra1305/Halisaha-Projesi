@@ -14,6 +14,7 @@ const profileRoutes = require('./routes/profile');
 const profileRoutesNew = require('./routes/profileRoutes');
 const ilanlarRoutes = require('./routes/ilanlar');
 const randevularRoutes = require('./routes/randevular');
+const duyurularRoutes = require('./routes/duyurular');
 
 // Middleware
 app.use(cors());
@@ -56,6 +57,8 @@ app.get('/api/health-db', async (req, res) => {
         });
     }
 });
+// Duyurular routes
+app.use('/api/duyurular', duyurularRoutes);
 
 // Auth routes
 app.use('/api/auth', authRoutes);

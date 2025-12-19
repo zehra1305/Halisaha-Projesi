@@ -15,7 +15,7 @@ class UserApiService {
   // Duyuruları Getir
   Future<List<Duyuru>> getDuyurular() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/duyurular'));
+      final response = await http.get(Uri.parse('$baseUrl/api/duyurular'));
 
       if (response.statusCode == 200) {
         List<dynamic> body = jsonDecode(response.body);

@@ -525,6 +525,7 @@ class ApiService {
           .timeout(timeout);
 
       if (response.statusCode == 200) {
+        print('YaklasanRandevular response: ${response.body}');
         final data = jsonDecode(response.body);
         if (data['data'] != null && data['data'] is List) {
           return (data['data'] as List)
