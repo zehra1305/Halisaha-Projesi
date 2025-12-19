@@ -1,19 +1,35 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const session = require('express-session');
-const db = require('./config/database');
-require('dotenv').config();
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const path = require("path");
+const session = require("express-session");
+const db = require("./config/database");
+require("dotenv").config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
+// Socket.IO Başlatma
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+// Socket mantığını çalıştır
+const socketHandler = require("./socket");
+socketHandler(io);
+
 // Routes
-const authRoutes = require('./routes/auth');
-const profileRoutes = require('./routes/profile');
-const profileRoutesNew = require('./routes/profileRoutes');
-const ilanlarRoutes = require('./routes/ilanlar');
-const randevularRoutes = require('./routes/randevular');
+const authRoutes = require("./routes/auth");
+const profileRoutes = require("./routes/profile");
+const profileRoutesNew = require("./routes/profileRoutes");
+const ilanlarRoutes = require("./routes/ilanlar");
+const randevularRoutes = require("./routes/randevular");
+const chatRoutes = require("./routes/chatRoutes");
 
 // Middleware
 app.use(cors());
@@ -21,65 +37,80 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session middleware
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'halisaha-secret-key-2024',
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "halisaha-secret-key-2024",
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-        secure: false, // Set to true if using HTTPS
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
+    cookie: {
+      secure: false, // Set to true if using HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
 
 // Static files - Profil fotoğrafları için
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 // Sağlık kontrol endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'Server çalışıyor ✅' });
+app.get("/health", (req, res) => {
+  res.json({ status: "Server çalışıyor ✅" });
 });
 
 // Database bağlantı testi
-app.get('/api/health-db', async (req, res) => {
-    try {
-        const result = await db.query('SELECT NOW()');
-        res.json({ 
-            status: 'Veritabanı bağlantısı başarılı ✅',
-            timestamp: result.rows[0].now 
-        });
-    } catch (err) {
-        res.status(500).json({ 
-            status: 'Veritabanı bağlantı hatası ❌',
-            error: err.message 
-        });
-    }
+app.get("/api/health-db", async (req, res) => {
+  try {
+    const result = await db.query("SELECT NOW()");
+    res.json({
+      status: "Veritabanı bağlantısı başarılı ✅",
+      timestamp: result.rows[0].now,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "Veritabanı bağlantı hatası ❌",
+      error: err.message,
+    });
+  }
 });
 
 // Auth routes
-app.use('/api/auth', authRoutes);
+app.use("/api/auth", authRoutes);
 
 // Profile routes (API)
-app.use('/api/profile', profileRoutes);
+app.use("/api/profile", profileRoutes);
 
 // Profile routes (Session-based)
-app.use('/api', profileRoutesNew);
+app.use("/api", profileRoutesNew);
 
 // İlanlar routes
-app.use('/api/ilanlar', ilanlarRoutes);
+app.use("/api/ilanlar", ilanlarRoutes);
 
 // Randevular routes
-app.use('/api/randevular', randevularRoutes);
+app.use("/api/randevular", randevularRoutes);
+
+// Chat routes
+app.use("/api/chat", chatRoutes);
 
 // Sunucuyu başlat
-app.listen(PORT, () => {
-    console.log(`🚀 Server http://localhost:${PORT} adresinde çalışıyor`);
+server.listen(PORT, () => {
+  console.log(`🚀 Server http://localhost:${PORT} adresinde çalışıyor`);
+  console.log(`💬 Socket.IO aktif - Chat sistemi hazır`);
+});
+
+// Server hataları
+server.on("error", (err) => {
+  console.error("❌ Sunucu hatası:", err.message);
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} zaten kullanımda`);
+  }
+  process.exit(1);
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-    console.log('\n📴 Server kapatılıyor...');
-    db.end();
-    process.exit(0);
+process.on("SIGINT", () => {
+  console.log("\n📴 Server kapatılıyor...");
+  db.end();
+  process.exit(0);
 });
