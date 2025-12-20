@@ -76,8 +76,9 @@ app.use('/api/ilanlar', ilanlarRoutes);
 app.use('/api/randevular', randevularRoutes);
 
 // Sunucuyu başlat
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server http://localhost:${PORT} adresinde çalışıyor`);
+    console.log(`📱 Emülatör için: http://10.0.2.2:${PORT}`);
 });
 
 // Graceful shutdown

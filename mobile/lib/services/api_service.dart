@@ -398,6 +398,7 @@ class ApiService {
   // Fetch all ilanlar (listings)
   Future<List<IlanModel>> fetchIlanlar() async {
     try {
+      print('🌐 API İsteği: $baseUrl/ilanlar');
       final response = await http
           .get(
             Uri.parse('$baseUrl/ilanlar'),
@@ -405,14 +406,18 @@ class ApiService {
           )
           .timeout(timeout);
 
+      print('📡 Response status: ${response.statusCode}');
+      print('📡 Response body uzunluğu: ${response.body.length} karakter');
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+        print('✅ ${data.length} ilan parse edildi');
         return data.map((json) => IlanModel.fromJson(json)).toList();
       } else {
         throw Exception('İlanlar yüklenemedi');
       }
     } catch (e) {
-      print('İlan yükleme hatası: $e');
+      print('❌ İlan yükleme hatası: $e');
       throw Exception('İlan yükleme hatası: ${e.toString()}');
     }
   }

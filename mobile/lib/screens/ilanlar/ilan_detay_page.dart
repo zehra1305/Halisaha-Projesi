@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/ilan_model.dart';
 import '../../services/api_service.dart';
+import 'chat_page.dart';
 
 // --- 3. SAYFA: İLAN DETAY (PROFİL GÖRÜNÜMÜ) ---
 class IlanDetayPage extends StatefulWidget {
@@ -76,6 +77,47 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
     }
   }
 
+  void _showMessageDialog() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          receiverName: widget.ilan.kullaniciAdi ?? 'Kullanıcı',
+          receiverId: widget.ilan.kullaniciId,
+          profileImageUrl: _profileImageUrl,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendMessage(String message) async {
+    try {
+      // Mesaj gönderme işlemi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Mesajınız ${widget.ilan.kullaniciAdi} kişisine gönderildi',
+          ),
+          backgroundColor: _mainGreen,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // Burada backend'e mesaj gönderme API'si eklenebilir
+      // await ApiService.instance.sendMessage(
+      //   receiverId: widget.ilan.kullaniciId,
+      //   message: message,
+      // );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mesaj gönderilemedi. Lütfen tekrar deneyin.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,22 +171,43 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                     ),
                   ),
                   const SizedBox(height: 15),
-                  _buildDetailRow(Icons.location_on, widget.ilan.konum),
-                  _buildDetailRow(Icons.calendar_today, _formatDateTime()),
+                  _buildDetailRow(
+                    Icons.location_on,
+                    widget.ilan.konum,
+                    const Color(0xFFE53935), // Kırmızı
+                  ),
+                  _buildDetailRow(
+                    Icons.calendar_today,
+                    _formatDateTime(),
+                    const Color(0xFF1E88E5), // Mavi
+                  ),
                   if (widget.ilan.kisiSayisi != null)
                     _buildDetailRow(
                       Icons.people,
                       '${widget.ilan.kisiSayisi} Oyuncu Aranıyor',
+                      const Color(0xFFFB8C00), // Turuncu
                     ),
                   if (widget.ilan.mevki != null &&
                       widget.ilan.mevki!.isNotEmpty)
-                    _buildDetailRow(Icons.person, widget.ilan.mevki!),
+                    _buildDetailRow(
+                      Icons.person,
+                      widget.ilan.mevki!,
+                      const Color(0xFF8E24AA), // Mor
+                    ),
                   if (widget.ilan.seviye != null &&
                       widget.ilan.seviye!.isNotEmpty)
-                    _buildDetailRow(Icons.star, widget.ilan.seviye!),
+                    _buildDetailRow(
+                      Icons.star,
+                      widget.ilan.seviye!,
+                      const Color(0xFFFDD835), // Sarı
+                    ),
                   if (widget.ilan.ucret != null &&
                       widget.ilan.ucret!.isNotEmpty)
-                    _buildDetailRow(Icons.monetization_on, widget.ilan.ucret!),
+                    _buildDetailRow(
+                      Icons.monetization_on,
+                      widget.ilan.ucret!,
+                      const Color(0xFF43A047), // Yeşil
+                    ),
 
                   const SizedBox(height: 15),
                   if (widget.ilan.aciklama.isNotEmpty)
@@ -257,34 +320,23 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _mainGreen,
-                          ),
-                          onPressed: () {},
-                          child: const Text(
-                            "MESAJ GÖNDER",
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _mainGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: _showMessageDialog,
+                      child: const Text(
+                        "MESAJ GÖNDER",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _mainGreen,
-                          ),
-                          onPressed: () {},
-                          child: const Text(
-                            "KATILMA TALEBİ",
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 40),
                 ],
@@ -341,12 +393,12 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
   }
 
   // IlanDetayPage'e ait yardımcı fonksiyon
-  Widget _buildDetailRow(IconData icon, String text) {
+  Widget _buildDetailRow(IconData icon, String text, Color iconColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.black54),
+          Icon(icon, size: 20, color: iconColor),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

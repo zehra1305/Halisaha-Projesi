@@ -34,6 +34,7 @@ class _IlanlarPageState extends State<IlanlarPage> {
 
   // BACKEND'DEN LİSTE ÇEKEN FUNKSİYA
   Future<void> _fetchIlanlar() async {
+    print('📢 İlanlar yükleniyor...');
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -41,11 +42,27 @@ class _IlanlarPageState extends State<IlanlarPage> {
 
     try {
       final liste = await ApiService.instance.fetchIlanlar();
+      print('✅ ${liste.length} ilan geldi backend\'den');
+
+      // İlanların tarihlerini kontrol et
+      for (var ilan in liste) {
+        print('📅 İlan: ${ilan.baslik}');
+        print('   Tarih: ${ilan.tarih}, Saat: ${ilan.saat}');
+        print('   fullDateTime: ${ilan.fullDateTime}');
+        print('   isExpired: ${ilan.isExpired}');
+        print('   Şu an: ${DateTime.now()}');
+      }
+
       setState(() {
-        ilanListesi = liste.where((ilan) => !ilan.isExpired).toList();
+        // Şimdilik tüm ilanları göster (tarih kontrolü geçici olarak devre dışı)
+        ilanListesi = liste; // .where((ilan) => !ilan.isExpired).toList();
+        print(
+          '✅ ${ilanListesi.length} ilan gösteriliyor (tarih filtresi devre dışı)',
+        );
         _isLoading = false;
       });
     } catch (e) {
+      print('❌ İlan yükleme hatası: $e');
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString();
@@ -140,7 +157,9 @@ class _IlanlarPageState extends State<IlanlarPage> {
       );
     }
 
-    final aktifIlanlar = ilanListesi.where((ilan) => !ilan.isExpired).toList();
+    // Tüm ilanları göster (tarih filtresi kaldırıldı)
+    final aktifIlanlar =
+        ilanListesi; // .where((ilan) => !ilan.isExpired).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,

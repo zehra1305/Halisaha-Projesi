@@ -11,6 +11,7 @@ import '../profile/profile_screen.dart';
 import '../ilanlar/ilanlar_page.dart';
 import '../randevular/randevularim_page.dart';
 import '../randevular/randevu_olustur_page.dart';
+import '../mesajlar/mesajlar_page.dart';
 
 // YENİ EKLENEN IMPORTLAR (Dosya yollarının doğru olduğundan emin ol)
 import '../../models/duyuru.dart';
@@ -458,21 +459,54 @@ class _HomeTabState extends State<HomeTab> {
                           child: Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Icon(
-                                    Icons.sports_soccer,
-                                    color: Colors.white.withOpacity(0.9),
-                                    size: 28,
+                                  const SizedBox(width: 48), // Balance için
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.sports_soccer,
+                                          color: Colors.white.withOpacity(0.9),
+                                          size: 28,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text(
+                                          "Rüya Halısaha",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  const Text(
-                                    "Rüya Halısaha",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
+                                  // Mesaj butonu
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.chat_bubble_outline,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const MesajlarPage(),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 ],
@@ -580,7 +614,7 @@ class _HomeTabState extends State<HomeTab> {
                                   TextButton(
                                     onPressed: _randevularimaGit,
                                     style: TextButton.styleFrom(
-                                      foregroundColor: mainGreen,
+                                      foregroundColor: Colors.white,
                                     ),
                                     child: Row(
                                       children: [
@@ -589,13 +623,14 @@ class _HomeTabState extends State<HomeTab> {
                                           style: TextStyle(
                                             fontWeight: FontWeight.w600,
                                             fontSize: 14,
+                                            color: Colors.white,
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        Icon(
+                                        const Icon(
                                           Icons.arrow_forward_ios,
                                           size: 14,
-                                          color: mainGreen,
+                                          color: Colors.white,
                                         ),
                                       ],
                                     ),
