@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
+import '../../services/storage_service.dart';
 
 class ChatPage extends StatefulWidget {
+  final int? sohbetId;
   final String receiverName;
   final int? receiverId;
   final String? profileImageUrl;
 
   const ChatPage({
     super.key,
+    this.sohbetId,
     required this.receiverName,
     this.receiverId,
     this.profileImageUrl,
@@ -23,49 +27,135 @@ class _ChatPageState extends State<ChatPage> {
   final Color _mainGreen = const Color(0xFF2FB335);
 
   @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  void _loadMessages() async {
+    if (widget.sohbetId == null) return;
+    try {
+      final result = await ApiService.instance.fetchMessages(widget.sohbetId.toString());
+      if (result['success']) {
+        final storage = StorageService();
+        final currentIdStr = await storage.getUserId();
+        final currentId = currentIdStr != null ? int.parse(currentIdStr) : null;
+
+        final List<dynamic> data = result['data'];
+        setState(() {
+          _messages.clear();
+          _messages.addAll(data.map((m) {
+            DateTime time;
+            try {
+              time = DateTime.parse(m['gonderme_zamani']);
+            } catch (_) {
+              time = DateTime.now();
+            }
+            return ChatMessage(
+              text: m['icerik'] ?? '',
+              isSent: currentId != null ? m['gonderen_id'] == currentId : false,
+              time: time,
+            );
+          }).toList());
+        });
+
+        // Scroll to bottom after a small delay
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        });
+      }
+    } catch (e) {
+      print('Mesaj yükleme hatası: $e');
+    }
+  }
+
+  @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
-    setState(() {
-      _messages.add(
-        ChatMessage(text: message, isSent: true, time: DateTime.now()),
-      );
-    });
-
     _messageController.clear();
 
-    // Scroll to bottom
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+    // Scroll to bottom (will be used after message is added)
+    void _scrollToBottom() {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+
+    // Eğer sohbetId varsa API'ye gönder
+    if (widget.sohbetId != null) {
+      final storage = StorageService();
+      final currentIdStr = await storage.getUserId();
+      if (currentIdStr != null) {
+        final res = await ApiService.instance.sendMessage(
+          sohbetId: widget.sohbetId.toString(),
+          gonderenId: currentIdStr,
+          icerik: message,
         );
+
+        if (res['success']) {
+          // Sunucudan dönen veriyi kullanabiliriz
+          final m = res['data'];
+          DateTime time;
+          try {
+            time = DateTime.parse(m['gonderme_zamani']);
+          } catch (_) {
+            time = DateTime.now();
+          }
+
+          setState(() {
+            // Gelen mesajı göster
+            _messages.add(ChatMessage(text: m['icerik'] ?? message, isSent: true, time: time));
+          });
+
+          _scrollToBottom();
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Mesajınız ${widget.receiverName} kişisine gönderildi'),
+              backgroundColor: _mainGreen,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          // Hata göster
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res['message'] ?? 'Mesaj gönderilemedi')),
+          );
+        }
       }
-    });
+    } else {
+      // Sohbet yoksa mesaj sunucuya kaydolmaz — kullanıcıyı bilgilendir
+      setState(() {
+        _messages.add(ChatMessage(text: message, isSent: true, time: DateTime.now()));
+      });
 
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Mesajınız ${widget.receiverName} kişisine gönderildi'),
-        backgroundColor: _mainGreen,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      _scrollToBottom();
 
-    // Burada backend'e mesaj gönderme API'si eklenebilir
-    // await ApiService.instance.sendMessage(
-    //   receiverId: widget.receiverId,
-    //   message: message,
-    // );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Not: Sohbet oluşturulmadığı için mesaj yerel olarak gösterildi; lütfen ilan üzerinden sohbet açın'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Widget _buildMessageBubble(ChatMessage message) {

@@ -15,6 +15,8 @@ const profileRoutesNew = require('./routes/profileRoutes');
 const ilanlarRoutes = require('./routes/ilanlar');
 const randevularRoutes = require('./routes/randevular');
 const duyurularRoutes = require('./routes/duyurular');
+const sohbetRoutes = require('./routes/sohbet');
+const mesajRoutes = require('./routes/mesaj');
 
 // Middleware
 app.use(cors());
@@ -74,6 +76,10 @@ app.use('/api/ilanlar', ilanlarRoutes);
 
 // Randevular routes
 app.use('/api/randevular', randevularRoutes);
+
+// Sohbet ve mesaj routes
+app.use('/api/sohbet', sohbetRoutes);
+app.use('/api/mesaj', mesajRoutes);
 
 // Sunucuyu başlat
 app.listen(PORT, '0.0.0.0', () => {

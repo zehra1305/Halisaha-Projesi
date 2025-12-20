@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ilanlar/chat_page.dart';
+import '../../services/api_service.dart';
+import '../../services/storage_service.dart';
 
 class MesajlarPage extends StatefulWidget {
   const MesajlarPage({super.key});
@@ -11,19 +13,53 @@ class MesajlarPage extends StatefulWidget {
 class _MesajlarPageState extends State<MesajlarPage> {
   final Color _mainGreen = const Color(0xFF2FB335);
 
-  // Örnek mesaj listesi - Backend'den gelecek
+  // Backend'den gelecek sohbetler
   final List<ConversationItem> _conversations = [];
 
   @override
   void initState() {
     super.initState();
-    // Örnek veriler - gerçek uygulamada backend'den gelecek
     _loadConversations();
   }
 
-  void _loadConversations() {
-    // Backend'den konuşmalar yüklenecek
-    // Şimdilik örnek veri
+  void _loadConversations() async {
+    try {
+      final storage = StorageService();
+      final userId = await storage.getUserId();
+      if (userId == null) return;
+
+      final result = await ApiService.instance.fetchConversations(userId);
+      if (result['success']) {
+        final List<dynamic> data = result['data'];
+        setState(() {
+          _conversations.clear();
+          _conversations.addAll(data.map((c) {
+            final lastTimeStr = c['son_mesaj_zamani'] ?? c['olusturma_zamani'];
+            DateTime lastTime;
+            try {
+              lastTime = DateTime.parse(lastTimeStr ?? DateTime.now().toIso8601String());
+            } catch (_) {
+              lastTime = DateTime.now();
+            }
+
+            return ConversationItem(
+              sohbetId: c['sohbet_id'],
+              userId: c['diger_kullanici_id'] ?? 0,
+              userName: c['diger_kullanici_ad'] ?? 'Kullanıcı',
+              profileImageUrl: c['diger_kullanici_fotografi'],
+              lastMessage: c['son_mesaj'] ?? '',
+              lastMessageTime: lastTime,
+              unreadCount: 0,
+            );
+          }).toList());
+        });
+      } else {
+        // hata mesajı gösterilebilir
+      }
+    } catch (e) {
+      // Hata yönetimi
+      print('Sohbet yükleme hatası: $e');
+    }
   }
 
   void _openAdminChat() {
@@ -240,12 +276,15 @@ class _MesajlarPageState extends State<MesajlarPage> {
               context,
               MaterialPageRoute(
                 builder: (context) => ChatPage(
+                  sohbetId: conversation.sohbetId,
                   receiverName: conversation.userName,
                   receiverId: conversation.userId,
                   profileImageUrl: conversation.profileImageUrl,
                 ),
               ),
-            );
+            ).then((_) {
+              _loadConversations();
+            });
           },
         ),
         const Divider(height: 1, indent: 80),
@@ -275,6 +314,7 @@ class _MesajlarPageState extends State<MesajlarPage> {
 }
 
 class ConversationItem {
+  final int sohbetId;
   final int userId;
   final String userName;
   final String? profileImageUrl;
@@ -283,6 +323,7 @@ class ConversationItem {
   final int unreadCount;
 
   ConversationItem({
+    required this.sohbetId,
     required this.userId,
     required this.userName,
     this.profileImageUrl,

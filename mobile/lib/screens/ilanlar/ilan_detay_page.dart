@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/ilan_model.dart';
 import '../../services/api_service.dart';
+import '../../services/storage_service.dart';
 import 'chat_page.dart';
 
 // --- 3. SAYFA: İLAN DETAY (PROFİL GÖRÜNÜMÜ) ---
@@ -77,11 +78,30 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
     }
   }
 
-  void _showMessageDialog() {
+  void _showMessageDialog() async {
+    // Sohbet oluştur (veya var olanı döndür) ve sohbetId'yi ChatPage'e geçir
+    final storage = StorageService();
+    final currentId = await storage.getUserId();
+    int? sohbetId;
+
+    if (currentId != null && widget.ilan.ilanId != null && widget.ilan.kullaniciId != null) {
+      final res = await ApiService.instance.createSohbet(
+        ilanId: widget.ilan.ilanId.toString(),
+        baslatanId: currentId,
+        ilanSahibiId: widget.ilan.kullaniciId.toString(),
+      );
+
+      if (res['success'] && res['data'] != null) {
+        final data = res['data'];
+        sohbetId = data['sohbet_id'] ?? data['sohbetId'];
+      }
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChatPage(
+          sohbetId: sohbetId,
           receiverName: widget.ilan.kullaniciAdi ?? 'Kullanıcı',
           receiverId: widget.ilan.kullaniciId,
           profileImageUrl: _profileImageUrl,

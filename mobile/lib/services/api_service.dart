@@ -598,4 +598,104 @@ class ApiService {
       throw Exception('Randevu iptal hatası: ${e.toString()}');
     }
   }
+
+  // CHAT / MESAJ İŞLEMLERİ
+
+  // Sohbet oluştur (veya var olanı döndür)
+  Future<Map<String, dynamic>> createSohbet({
+    required String ilanId,
+    required String baslatanId,
+    required String ilanSahibiId,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/sohbet'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'ilan_id': int.parse(ilanId),
+              'baslatan_id': int.parse(baslatanId),
+              'ilan_sahibi_id': int.parse(ilanSahibiId),
+            }),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'message': jsonDecode(response.body)['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Kullanıcının sohbetlerini getir
+  Future<Map<String, dynamic>> fetchConversations(String userId) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/sohbet?userId=$userId'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'message': jsonDecode(response.body)['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Sohbete ait mesajları getir
+  Future<Map<String, dynamic>> fetchMessages(String sohbetId) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/mesaj/sohbet/$sohbetId'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'message': jsonDecode(response.body)['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Mesaj gönder
+  Future<Map<String, dynamic>> sendMessage({
+    required String sohbetId,
+    required String gonderenId,
+    required String icerik,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/mesaj'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'sohbet_id': int.parse(sohbetId),
+              'gonderen_id': int.parse(gonderenId),
+              'icerik': icerik,
+            }),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'message': jsonDecode(response.body)['message']};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
 }
