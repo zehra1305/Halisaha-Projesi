@@ -40,7 +40,7 @@ CREATE TABLE sohbet (
     ilan_sahibi_id INT NOT NULL REFERENCES kullanici(kullanici_id) ON DELETE RESTRICT,
     olusturma_zamani TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    UNIQUE (ilan_id, baslatan_id, ilan_sahibi_id)
+    UNIQUE (baslatan_id, ilan_sahibi_id)
 );
 
 CREATE TABLE mesaj (
