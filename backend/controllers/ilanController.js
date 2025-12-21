@@ -159,6 +159,62 @@ exports.deleteIlan = async (req, res) => {
     }
 };
 
+// İlan güncelle
+exports.updateIlan = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            baslik,
+            aciklama,
+            tarih,
+            saat,
+            konum,
+            kisiSayisi,
+            mevki,
+            seviye,
+            ucret
+        } = req.body;
+
+        // İlan var mı kontrol et
+        const checkIlan = await db.query(
+            'SELECT ilan_id FROM ilanlar WHERE ilan_id = $1',
+            [id]
+        );
+
+        if (checkIlan.rows.length === 0) {
+            return res.status(404).json({ 
+                message: 'İlan bulunamadı' 
+            });
+        }
+
+        const result = await db.query(`
+            UPDATE ilanlar 
+            SET baslik = $1,
+                aciklama = $2,
+                tarih = $3,
+                saat = $4,
+                konum = $5,
+                kisi_sayisi = $6,
+                mevki = $7,
+                seviye = $8,
+                ucret = $9
+            WHERE ilan_id = $10
+            RETURNING *
+        `, [baslik, aciklama || null, tarih, saat, konum, kisiSayisi || null, mevki || null, seviye || null, ucret || null, id]);
+
+        return res.status(200).json({
+            message: 'İlan başarıyla güncellendi',
+            data: result.rows[0]
+        });
+    } catch (err) {
+        console.error('İlan güncelleme hatası:', err);
+        return res.status(500).json({ 
+            message: 'İlan güncellenirken hata oluştu',
+            error: err.message 
+        });
+    }
+};
+
 // Kullanıcıya ait ilanları getir
 exports.getIlanlarByUserId = async (req, res) => {
     try {

@@ -17,11 +17,19 @@ const randevularRoutes = require('./routes/randevular');
 const duyurularRoutes = require('./routes/duyurular');
 const sohbetRoutes = require('./routes/sohbet');
 const mesajRoutes = require('./routes/mesaj');
+const feedbackRoutes = require('./routes/feedback');
+const kadrolarRoutes = require('./routes/kadrolar');
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ charset: 'utf-8' }));
+app.use(express.urlencoded({ extended: true, charset: 'utf-8' }));
+
+// UTF-8 encoding için header middleware
+app.use((req, res, next) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    next();
+});
 
 // Session middleware
 app.use(session({
@@ -80,6 +88,12 @@ app.use('/api/randevular', randevularRoutes);
 // Sohbet ve mesaj routes
 app.use('/api/sohbet', sohbetRoutes);
 app.use('/api/mesaj', mesajRoutes);
+
+// Geri bildirim routes
+app.use('/api/feedback', feedbackRoutes);
+
+// Kadro routes
+app.use('/api/kadrolar', kadrolarRoutes);
 
 // Sunucuyu başlat
 app.listen(PORT, '0.0.0.0', () => {

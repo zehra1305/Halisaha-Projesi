@@ -8,11 +8,21 @@ const SendMailer = async(mailOptions) => {
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASSWORD
+        },
+        tls: {
+            rejectUnauthorized: false
         }
     });
 
+    // UTF-8 desteği için headers ekle
+    const mailOptionsWithEncoding = {
+        ...mailOptions,
+        encoding: 'utf-8',
+        textEncoding: 'base64'
+    };
+
     try {
-        const info = await transporter.sendMail(mailOptions);
+        const info = await transporter.sendMail(mailOptionsWithEncoding);
         console.log("✉️  Email gönderildi:", info.response);
         return true;
     } catch (error) {

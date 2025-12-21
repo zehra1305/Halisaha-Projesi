@@ -32,6 +32,20 @@ exports.getProfile = async (req, res) => {
 
         const user = result.rows[0];
 
+        // Profil fotoğrafı için tam URL oluştur
+        let profileImageUrl = null;
+        if (user.profil_fotografi) {
+            // Eğer zaten http ile başlıyorsa olduğu gibi kullan
+            if (user.profil_fotografi.startsWith('http')) {
+                profileImageUrl = user.profil_fotografi;
+            } else {
+                // Android emülatör için 10.0.2.2 kullan
+                // Eğer path / ile başlıyorsa ekstra / ekleme
+                const path = user.profil_fotografi.startsWith('/') ? user.profil_fotografi.substring(1) : user.profil_fotografi;
+                profileImageUrl = `http://10.0.2.2:3001/${path}`;
+            }
+        }
+
         return res.status(200).json({
             success: true,
             data: {
@@ -39,7 +53,7 @@ exports.getProfile = async (req, res) => {
                 name: `${user.ad} ${user.soyad}`.trim(),
                 email: user.email,
                 phone: user.telefon,
-                profileImage: user.profil_fotografi,
+                profileImage: profileImageUrl,
                 createdAt: user.kayit_tarihi
             }
         });

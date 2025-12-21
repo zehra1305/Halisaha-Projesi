@@ -24,7 +24,16 @@ exports.getSohbetlerByUser = async (req, res) => {
             ORDER BY COALESCE(m.gonderme_zamani, s.olusturma_zamani) DESC
         `, [userId]);
 
-        return res.status(200).json(result.rows);
+        // Profil fotoğrafı URL'lerini düzenle
+        const rows = result.rows.map(row => {
+            if (row.diger_kullanici_fotografi && !row.diger_kullanici_fotografi.startsWith('http')) {
+                const path = row.diger_kullanici_fotografi.startsWith('/') ? row.diger_kullanici_fotografi.substring(1) : row.diger_kullanici_fotografi;
+                row.diger_kullanici_fotografi = `http://10.0.2.2:3001/${path}`;
+            }
+            return row;
+        });
+
+        return res.status(200).json(rows);
     } catch (err) {
         console.error('Sohbetler getirme hatası:', err);
         return res.status(500).json({ message: 'Sohbetler yüklenirken hata oluştu', error: err.message });

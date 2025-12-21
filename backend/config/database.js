@@ -13,6 +13,8 @@ const pool = new Pool(
         max: 20, // Maximum pool connections
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
+        // UTF-8 encoding
+        client_encoding: 'UTF8',
     }
     : {
         host: process.env.DB_HOST || 'localhost',
@@ -20,7 +22,9 @@ const pool = new Pool(
         port: parseInt(process.env.DB_PORT) || 5432,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME || 'halisaha_proje_db',
-        ssl: false
+        ssl: false,
+        // UTF-8 encoding
+        client_encoding: 'UTF8',
     }
 );
 

@@ -14,7 +14,16 @@ exports.getMessagesBySohbet = async (req, res) => {
             [sohbetId]
         );
 
-        return res.status(200).json(result.rows);
+        // Profil fotoğrafı URL'lerini düzenle
+        const rows = result.rows.map(row => {
+            if (row.profil_fotografi && !row.profil_fotografi.startsWith('http')) {
+                const path = row.profil_fotografi.startsWith('/') ? row.profil_fotografi.substring(1) : row.profil_fotografi;
+                row.profil_fotografi = `http://10.0.2.2:3001/${path}`;
+            }
+            return row;
+        });
+
+        return res.status(200).json(rows);
     } catch (err) {
         console.error('Mesajlar getirme hatası:', err);
         return res.status(500).json({ message: 'Mesajlar yüklenirken hata oluştu', error: err.message });
