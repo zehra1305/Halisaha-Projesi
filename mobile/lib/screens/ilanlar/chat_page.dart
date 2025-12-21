@@ -35,7 +35,9 @@ class _ChatPageState extends State<ChatPage> {
   void _loadMessages() async {
     if (widget.sohbetId == null) return;
     try {
-      final result = await ApiService.instance.fetchMessages(widget.sohbetId.toString());
+      final result = await ApiService.instance.fetchMessages(
+        widget.sohbetId.toString(),
+      );
       if (result['success']) {
         final storage = StorageService();
         final currentIdStr = await storage.getUserId();
@@ -44,25 +46,41 @@ class _ChatPageState extends State<ChatPage> {
         final List<dynamic> data = result['data'];
         setState(() {
           _messages.clear();
-          _messages.addAll(data.map((m) {
-            DateTime time;
-            try {
-              time = DateTime.parse(m['gonderme_zamani']);
-            } catch (_) {
-              time = DateTime.now();
-            }
-            return ChatMessage(
-              text: m['icerik'] ?? '',
-              isSent: currentId != null ? m['gonderen_id'] == currentId : false,
-              time: time,
-            );
-          }).toList());
+          _messages.addAll(
+            data.map((m) {
+              DateTime time;
+              try {
+                time = DateTime.parse(m['gonderme_zamani']);
+              } catch (_) {
+                time = DateTime.now();
+              }
+              final isSent = currentId != null
+                  ? m['gonderen_id'] == currentId
+                  : false;
+
+              // Debug: Profil fotoğrafı kontrolü
+              final profileUrl = !isSent ? m['profil_fotografi'] : null;
+              if (!isSent) {
+                print('Gelen mesaj profil fotoğrafı: $profileUrl');
+              }
+
+              return ChatMessage(
+                text: m['icerik'] ?? '',
+                isSent: isSent,
+                time: time,
+                profileImageUrl: profileUrl,
+                senderName: !isSent ? m['gonderen_adi'] : null,
+              );
+            }).toList(),
+          );
         });
 
         // Scroll to bottom after a small delay
         Future.delayed(const Duration(milliseconds: 100), () {
           if (_scrollController.hasClients) {
-            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+            _scrollController.jumpTo(
+              _scrollController.position.maxScrollExtent,
+            );
           }
         });
       }
@@ -120,7 +138,16 @@ class _ChatPageState extends State<ChatPage> {
 
           setState(() {
             // Gelen mesajı göster
-            _messages.add(ChatMessage(text: m['icerik'] ?? message, isSent: true, time: time));
+            _messages.add(
+              ChatMessage(
+                text: m['icerik'] ?? message,
+                isSent: true,
+                time: time,
+                profileImageUrl:
+                    null, // Kendi mesajımız için profil fotoğrafı yok
+                senderName: null,
+              ),
+            );
           });
 
           _scrollToBottom();
@@ -128,7 +155,9 @@ class _ChatPageState extends State<ChatPage> {
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Mesajınız ${widget.receiverName} kişisine gönderildi'),
+              content: Text(
+                'Mesajınız ${widget.receiverName} kişisine gönderildi',
+              ),
               backgroundColor: _mainGreen,
               duration: const Duration(seconds: 2),
             ),
@@ -143,14 +172,24 @@ class _ChatPageState extends State<ChatPage> {
     } else {
       // Sohbet yoksa mesaj sunucuya kaydolmaz — kullanıcıyı bilgilendir
       setState(() {
-        _messages.add(ChatMessage(text: message, isSent: true, time: DateTime.now()));
+        _messages.add(
+          ChatMessage(
+            text: message,
+            isSent: true,
+            time: DateTime.now(),
+            profileImageUrl: null,
+            senderName: null,
+          ),
+        );
       });
 
       _scrollToBottom();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Not: Sohbet oluşturulmadığı için mesaj yerel olarak gösterildi; lütfen ilan üzerinden sohbet açın'),
+          content: Text(
+            'Not: Sohbet oluşturulmadığı için mesaj yerel olarak gösterildi; lütfen ilan üzerinden sohbet açın',
+          ),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 3),
         ),
@@ -161,41 +200,86 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMessageBubble(ChatMessage message) {
     return Align(
       alignment: message.isSent ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: message.isSent ? _mainGreen : Colors.grey[200],
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: message.isSent
-                ? const Radius.circular(18)
-                : const Radius.circular(0),
-            bottomRight: message.isSent
-                ? const Radius.circular(0)
-                : const Radius.circular(18),
-          ),
-        ),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        child: Row(
+          mainAxisAlignment: message.isSent
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              message.text,
-              style: TextStyle(
-                color: message.isSent ? Colors.white : Colors.black87,
-                fontSize: 15,
+            // Profil fotoğrafı (sadece gelen mesajlar için)
+            if (!message.isSent) ...[
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.grey[300],
+                backgroundImage:
+                    message.profileImageUrl != null &&
+                        message.profileImageUrl!.isNotEmpty
+                    ? NetworkImage(message.profileImageUrl!)
+                    : null,
+                onBackgroundImageError: message.profileImageUrl != null
+                    ? (exception, stackTrace) {
+                        print(
+                          'Profil fotoğrafı yükleme hatası: ${message.profileImageUrl}',
+                        );
+                        print('Hata: $exception');
+                      }
+                    : null,
+                child:
+                    message.profileImageUrl == null ||
+                        message.profileImageUrl!.isEmpty
+                    ? Text(
+                        message.senderName?[0].toUpperCase() ?? 'K',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _formatTime(message.time),
-              style: TextStyle(
-                color: message.isSent ? Colors.white70 : Colors.grey,
-                fontSize: 11,
+              const SizedBox(width: 8),
+            ],
+
+            // Mesaj balonu
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: message.isSent ? _mainGreen : Colors.grey[200],
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
+                  bottomLeft: message.isSent
+                      ? const Radius.circular(18)
+                      : const Radius.circular(0),
+                  bottomRight: message.isSent
+                      ? const Radius.circular(0)
+                      : const Radius.circular(18),
+                ),
+              ),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.65,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.text,
+                    style: TextStyle(
+                      color: message.isSent ? Colors.white : Colors.black87,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTime(message.time),
+                    style: TextStyle(
+                      color: message.isSent ? Colors.white70 : Colors.grey,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -366,6 +450,14 @@ class ChatMessage {
   final String text;
   final bool isSent;
   final DateTime time;
+  final String? profileImageUrl;
+  final String? senderName;
 
-  ChatMessage({required this.text, required this.isSent, required this.time});
+  ChatMessage({
+    required this.text,
+    required this.isSent,
+    required this.time,
+    this.profileImageUrl,
+    this.senderName,
+  });
 }

@@ -29,6 +29,7 @@ Widget buildInputBox({
   bool readOnly = false,
   VoidCallback? onTap,
   int? maxLength,
+  bool isRequired = true, // Yeni parametre: alan zorunlu mu?
 }) {
   return Container(
     decoration: BoxDecoration(
@@ -54,12 +55,14 @@ Widget buildInputBox({
         suffixIcon: icon != null ? Icon(icon, color: Colors.black54) : null,
         counterText: '',
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Bu alan boş bırakılamaz';
-        }
-        return null;
-      },
+      validator: isRequired
+          ? (value) {
+              if (value == null || value.isEmpty) {
+                return 'Bu alan boş bırakılamaz';
+              }
+              return null;
+            }
+          : null,
     ),
   );
 }

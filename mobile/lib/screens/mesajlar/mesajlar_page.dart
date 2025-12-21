@@ -12,14 +12,37 @@ class MesajlarPage extends StatefulWidget {
 
 class _MesajlarPageState extends State<MesajlarPage> {
   final Color _mainGreen = const Color(0xFF2FB335);
+  final TextEditingController _searchController = TextEditingController();
 
   // Backend'den gelecek sohbetler
   final List<ConversationItem> _conversations = [];
+  List<ConversationItem> _filteredConversations = [];
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
+    _searchController.addListener(_filterConversations);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterConversations() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredConversations = List.from(_conversations);
+      } else {
+        _filteredConversations = _conversations.where((conversation) {
+          return conversation.userName.toLowerCase().contains(query) ||
+              conversation.lastMessage.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
   }
 
   void _loadConversations() async {
@@ -33,25 +56,31 @@ class _MesajlarPageState extends State<MesajlarPage> {
         final List<dynamic> data = result['data'];
         setState(() {
           _conversations.clear();
-          _conversations.addAll(data.map((c) {
-            final lastTimeStr = c['son_mesaj_zamani'] ?? c['olusturma_zamani'];
-            DateTime lastTime;
-            try {
-              lastTime = DateTime.parse(lastTimeStr ?? DateTime.now().toIso8601String());
-            } catch (_) {
-              lastTime = DateTime.now();
-            }
+          _conversations.addAll(
+            data.map((c) {
+              final lastTimeStr =
+                  c['son_mesaj_zamani'] ?? c['olusturma_zamani'];
+              DateTime lastTime;
+              try {
+                lastTime = DateTime.parse(
+                  lastTimeStr ?? DateTime.now().toIso8601String(),
+                );
+              } catch (_) {
+                lastTime = DateTime.now();
+              }
 
-            return ConversationItem(
-              sohbetId: c['sohbet_id'],
-              userId: c['diger_kullanici_id'] ?? 0,
-              userName: c['diger_kullanici_ad'] ?? 'Kullanıcı',
-              profileImageUrl: c['diger_kullanici_fotografi'],
-              lastMessage: c['son_mesaj'] ?? '',
-              lastMessageTime: lastTime,
-              unreadCount: 0,
-            );
-          }).toList());
+              return ConversationItem(
+                sohbetId: c['sohbet_id'],
+                userId: c['diger_kullanici_id'] ?? 0,
+                userName: c['diger_kullanici_ad'] ?? 'Kullanıcı',
+                profileImageUrl: c['diger_kullanici_fotografi'],
+                lastMessage: c['son_mesaj'] ?? '',
+                lastMessageTime: lastTime,
+                unreadCount: 0,
+              );
+            }).toList(),
+          );
+          _filteredConversations = List.from(_conversations);
         });
       } else {
         // hata mesajı gösterilebilir
@@ -122,10 +151,19 @@ class _MesajlarPageState extends State<MesajlarPage> {
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
+              controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Ara...',
                 hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                    : null,
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -142,7 +180,7 @@ class _MesajlarPageState extends State<MesajlarPage> {
 
           // Konuşma listesi
           Expanded(
-            child: _conversations.isEmpty
+            child: _filteredConversations.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -154,7 +192,9 @@ class _MesajlarPageState extends State<MesajlarPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Henüz mesajınız yok',
+                          _searchController.text.isEmpty
+                              ? 'Henüz mesajınız yok'
+                              : 'Sonuç bulunamadı',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 18,
@@ -163,7 +203,9 @@ class _MesajlarPageState extends State<MesajlarPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'İlan sahipleriyle mesajlaşmaya başlayın',
+                          _searchController.text.isEmpty
+                              ? 'İlan sahipleriyle mesajlaşmaya başlayın'
+                              : 'Farklı bir arama yapın',
                           style: TextStyle(
                             color: Colors.grey[500],
                             fontSize: 14,
@@ -173,9 +215,9 @@ class _MesajlarPageState extends State<MesajlarPage> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: _conversations.length,
+                    itemCount: _filteredConversations.length,
                     itemBuilder: (context, index) {
-                      final conversation = _conversations[index];
+                      final conversation = _filteredConversations[index];
                       return _buildConversationItem(conversation);
                     },
                   ),
@@ -186,25 +228,52 @@ class _MesajlarPageState extends State<MesajlarPage> {
   }
 
   Widget _buildConversationItem(ConversationItem conversation) {
+    // Profil resmi URL'ini düzenle
+    String? imageUrl;
+    if (conversation.profileImageUrl != null &&
+        conversation.profileImageUrl!.isNotEmpty) {
+      imageUrl = conversation.profileImageUrl!.startsWith('http')
+          ? conversation.profileImageUrl
+          : 'http://10.0.2.2:3001${conversation.profileImageUrl!.startsWith('/') ? conversation.profileImageUrl : '/${conversation.profileImageUrl}'}';
+    }
+
     return Column(
       children: [
         ListTile(
           leading: CircleAvatar(
             radius: 28,
             backgroundColor: _mainGreen.withOpacity(0.2),
-            backgroundImage: conversation.profileImageUrl != null
-                ? NetworkImage(conversation.profileImageUrl!)
-                : null,
-            child: conversation.profileImageUrl == null
-                ? Text(
-                    conversation.userName[0].toUpperCase(),
+            child: imageUrl != null
+                ? ClipOval(
+                    child: Image.network(
+                      imageUrl,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Text(
+                          conversation.userName.isNotEmpty
+                              ? conversation.userName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color: _mainGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : Text(
+                    conversation.userName.isNotEmpty
+                        ? conversation.userName[0].toUpperCase()
+                        : '?',
                     style: TextStyle(
                       color: _mainGreen,
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                     ),
-                  )
-                : null,
+                  ),
           ),
           title: Row(
             children: [

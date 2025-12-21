@@ -12,6 +12,8 @@ import '../ilanlar/ilanlar_page.dart';
 import '../randevular/randevularim_page.dart';
 import '../randevular/randevu_olustur_page.dart';
 import '../mesajlar/mesajlar_page.dart';
+import '../kadro/kadro_olustur_page.dart';
+import '../kadro/kadro_list_page.dart';
 
 // YENİ EKLENEN IMPORTLAR (Dosya yollarının doğru olduğundan emin ol)
 import '../../models/duyuru.dart';
@@ -25,11 +27,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 2;
 
   final List<Widget> _screens = [
-    const HomeTab(),
+    const KadroListPage(),
     const IlanlarPage(),
+    const HomeTab(),
     const RandevuOlusturPage(),
     const ProfileScreen(),
   ];
@@ -40,36 +43,49 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: _screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: mainGreen,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 30),
-            label: 'Anasayfa',
+      bottomNavigationBar: BottomAppBar(
+        color: mainGreen,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              _buildNavItem(Icons.sports_soccer, 'Kadrolar', 0),
+              _buildNavItem(Icons.campaign, 'İlanlar', 1),
+              _buildNavItem(Icons.home, 'Ana Sayfa', 2),
+              _buildNavItem(Icons.calendar_today, 'Randevular', 3),
+              _buildNavItem(Icons.person, 'Profil', 4),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline, size: 30),
-            label: 'İlanlar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined, size: 30),
-            label: 'Randevu Oluştur',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline, size: 30),
-            label: 'Profil',
-          ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _selectedIndex = index),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.white70,
+              size: isSelected ? 28 : 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontSize: isSelected ? 12 : 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -719,7 +735,7 @@ class _HomeTabState extends State<HomeTab> {
                                         ),
                                       ),
                                     )
-                                  : Container(
+                                  : SizedBox(
                                       height: 155,
                                       child: PageView.builder(
                                         controller: PageController(
@@ -1193,4 +1209,46 @@ class WavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class KadroPlaceholder extends StatelessWidget {
+  const KadroPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const Color mainGreen = Color(0xFF2FB335);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.sports_soccer, size: 80, color: mainGreen),
+          const SizedBox(height: 20),
+          const Text(
+            'Kadro Oluştur',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const KadroOlusturPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Yeni Kadro'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: mainGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              textStyle: const TextStyle(fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

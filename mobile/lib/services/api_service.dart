@@ -19,6 +19,73 @@ class ApiService {
   // Timeout süresi
   static const Duration timeout = Duration(seconds: 10);
 
+  // UTF-8 encoding için header helper
+  Map<String, String> get _headers => {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Accept': 'application/json; charset=utf-8',
+  };
+
+  // Generic GET request
+  static Future<Map<String, dynamic>> get(String endpoint) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl$endpoint'),
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json; charset=utf-8',
+            },
+          )
+          .timeout(timeout);
+
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Generic POST request
+  static Future<Map<String, dynamic>> post(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl$endpoint'),
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json; charset=utf-8',
+            },
+            body: jsonEncode(data),
+          )
+          .timeout(timeout);
+
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Generic DELETE request
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl$endpoint'),
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Accept': 'application/json; charset=utf-8',
+            },
+          )
+          .timeout(timeout);
+
+      return jsonDecode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
   // Login endpoint
   Future<Map<String, dynamic>> login(
     String email,
@@ -29,7 +96,7 @@ class ApiService {
       final response = await http
           .post(
             Uri.parse('$baseUrl/auth/login'),
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers,
             body: jsonEncode({
               'email': email,
               'password': password,
@@ -39,11 +106,16 @@ class ApiService {
           .timeout(timeout);
 
       if (response.statusCode == 200) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        return {
+          'success': true,
+          'data': jsonDecode(utf8.decode(response.bodyBytes)),
+        };
       } else {
         return {
           'success': false,
-          'message': jsonDecode(response.body)['message'] ?? 'Giriş başarısız',
+          'message':
+              jsonDecode(utf8.decode(response.bodyBytes))['message'] ??
+              'Giriş başarısız',
         };
       }
     } catch (e) {
@@ -62,7 +134,7 @@ class ApiService {
       final response = await http
           .post(
             Uri.parse('$baseUrl/auth/register'),
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers,
             body: jsonEncode({
               'name': name,
               'email': email,
@@ -73,11 +145,16 @@ class ApiService {
           .timeout(timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        return {
+          'success': true,
+          'data': jsonDecode(utf8.decode(response.bodyBytes)),
+        };
       } else {
         return {
           'success': false,
-          'message': jsonDecode(response.body)['message'] ?? 'Kayıt başarısız',
+          'message':
+              jsonDecode(utf8.decode(response.bodyBytes))['message'] ??
+              'Kayıt başarısız',
         };
       }
     } catch (e) {
@@ -400,17 +477,14 @@ class ApiService {
     try {
       print('🌐 API İsteği: $baseUrl/ilanlar');
       final response = await http
-          .get(
-            Uri.parse('$baseUrl/ilanlar'),
-            headers: {'Content-Type': 'application/json'},
-          )
+          .get(Uri.parse('$baseUrl/ilanlar'), headers: _headers)
           .timeout(timeout);
 
       print('📡 Response status: ${response.statusCode}');
       print('📡 Response body uzunluğu: ${response.body.length} karakter');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         print('✅ ${data.length} ilan parse edildi');
         return data.map((json) => IlanModel.fromJson(json)).toList();
       } else {
@@ -422,19 +496,43 @@ class ApiService {
     }
   }
 
+  // Fetch single ilan by ID
+  Future<IlanModel?> fetchIlanById(String ilanId) async {
+    try {
+      print('🌐 API İsteği: $baseUrl/ilanlar/$ilanId');
+      final response = await http
+          .get(Uri.parse('$baseUrl/ilanlar/$ilanId'), headers: _headers)
+          .timeout(timeout);
+
+      print('📡 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final dynamic data = jsonDecode(utf8.decode(response.bodyBytes));
+        print('✅ İlan detayı alındı');
+        return IlanModel.fromJson(data);
+      } else {
+        print('❌ İlan bulunamadı');
+        return null;
+      }
+    } catch (e) {
+      print('❌ İlan detay yükleme hatası: $e');
+      return null;
+    }
+  }
+
   // Add new ilan
   Future<IlanModel> addIlan(IlanModel ilan) async {
     try {
       final response = await http
           .post(
             Uri.parse('$baseUrl/ilanlar'),
-            headers: {'Content-Type': 'application/json'},
+            headers: _headers,
             body: jsonEncode(ilan.toJson()),
           )
           .timeout(timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final createdIlan = jsonDecode(response.body);
+        final createdIlan = jsonDecode(utf8.decode(response.bodyBytes));
         return IlanModel.fromJson(createdIlan);
       } else {
         throw Exception('İlan kaydedilemedi');
@@ -623,7 +721,10 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(response.body)};
       } else {
-        return {'success': false, 'message': jsonDecode(response.body)['message']};
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'],
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
@@ -643,7 +744,10 @@ class ApiService {
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       } else {
-        return {'success': false, 'message': jsonDecode(response.body)['message']};
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'],
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
@@ -663,7 +767,10 @@ class ApiService {
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
       } else {
-        return {'success': false, 'message': jsonDecode(response.body)['message']};
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'],
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
@@ -692,7 +799,126 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(response.body)};
       } else {
-        return {'success': false, 'message': jsonDecode(response.body)['message']};
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'],
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // İlan sil
+  Future<Map<String, dynamic>> deleteIlan(String ilanId) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/ilanlar/$ilanId'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {
+          'success': false,
+          'message': jsonDecode(response.body)['message'] ?? 'İlan silinemedi',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // İlan güncelle
+  Future<Map<String, dynamic>> updateIlan({
+    required String ilanId,
+    required String baslik,
+    required String tarih,
+    required String saat,
+    required String konum,
+    String? aciklama,
+    int? kisiSayisi,
+    String? mevki,
+    String? seviye,
+    double? ucret,
+  }) async {
+    try {
+      final url = '$baseUrl/ilanlar/$ilanId';
+      final body = {
+        'baslik': baslik,
+        'aciklama': aciklama,
+        'tarih': tarih,
+        'saat': saat,
+        'konum': konum,
+        'kisiSayisi': kisiSayisi,
+        'mevki': mevki,
+        'seviye': seviye,
+        'ucret': ucret,
+      };
+
+      print('📝 İlan Güncelleme İsteği:');
+      print('   URL: $url');
+      print('   Body: $body');
+
+      final response = await http
+          .put(Uri.parse(url), headers: _headers, body: jsonEncode(body))
+          .timeout(timeout);
+
+      print('📝 İlan Güncelleme Yanıtı: ${response.statusCode}');
+      print('   Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': jsonDecode(utf8.decode(response.bodyBytes)),
+        };
+      } else {
+        return {
+          'success': false,
+          'message':
+              jsonDecode(utf8.decode(response.bodyBytes))['message'] ??
+              'İlan güncellenemedi',
+        };
+      }
+    } catch (e) {
+      print('❌ İlan Güncelleme Hatası: $e');
+      return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // Geri bildirim gönder
+  Future<Map<String, dynamic>> sendFeedback({
+    required String kullaniciId,
+    required String mesaj,
+    String? baslik,
+    String? kategori,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/feedback'),
+            headers: _headers,
+            body: jsonEncode({
+              'kullaniciId': int.tryParse(kullaniciId),
+              'baslik': baslik,
+              'mesaj': mesaj,
+              'kategori': kategori ?? 'Genel',
+            }),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return jsonDecode(utf8.decode(response.bodyBytes));
+      } else {
+        return {
+          'success': false,
+          'message':
+              jsonDecode(utf8.decode(response.bodyBytes))['message'] ??
+              'Gönderim başarısız',
+        };
       }
     } catch (e) {
       return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};

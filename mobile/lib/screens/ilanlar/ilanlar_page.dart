@@ -105,11 +105,16 @@ class _IlanlarPageState extends State<IlanlarPage> {
     }
   }
 
-  void _detaySayfasinaGit(IlanModel ilan) {
-    Navigator.push(
+  void _detaySayfasinaGit(IlanModel ilan) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => IlanDetayPage(ilan: ilan)),
     );
+
+    // Eğer ilan güncellendiyse veya silindiyse listeyi yenile
+    if (result == true && mounted) {
+      _fetchIlanlar();
+    }
   }
 
   String _formatDateTime(IlanModel ilan) {
@@ -135,7 +140,20 @@ class _IlanlarPageState extends State<IlanlarPage> {
     if (_isLoading && ilanListesi.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.white,
-        appBar: _buildAppBar(),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: const Text(
+            "İLANLAR",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Color(0xFF2FB335),
+          elevation: 0,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -143,7 +161,20 @@ class _IlanlarPageState extends State<IlanlarPage> {
     if (_errorMessage != null) {
       return Scaffold(
         backgroundColor: Colors.white,
-        appBar: _buildAppBar(),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: const Text(
+            "İLANLAR",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Color(0xFF2FB335),
+          elevation: 0,
+        ),
         body: Center(
           child: Text(
             _errorMessage!,
@@ -151,9 +182,15 @@ class _IlanlarPageState extends State<IlanlarPage> {
             style: const TextStyle(color: Colors.red),
           ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        floatingActionButton: _buildFab(),
-        bottomNavigationBar: _buildBottomBar(),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _ilanEkleSayfasinaGit,
+          backgroundColor: _mainGreen,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'İlan Ver',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
       );
     }
 
@@ -163,108 +200,30 @@ class _IlanlarPageState extends State<IlanlarPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: _buildAppBar(),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text(
+          "İLANLAR",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Color(0xFF2FB335),
+        elevation: 0,
+      ),
       body: aktifIlanlar.isEmpty
           ? _buildBosDurum()
           : _buildListeDurumu(aktifIlanlar),
-      bottomNavigationBar: _buildBottomBarWithFab(),
-    );
-  }
-
-  AppBar _buildAppBar() {
-    return AppBar(
-      backgroundColor: _mainGreen,
-      automaticallyImplyLeading: false,
-      title: const Text(
-        "İLANLAR",
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-          fontSize: 22,
-        ),
-      ),
-      centerTitle: true,
-      elevation: 0,
-    );
-  }
-
-  Widget _buildBottomBarWithFab() {
-    return Container(
-      height: 100,
-      color: Colors.white,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 80,
-              color: _mainGreen,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.only(top: 40.0),
-              child: const Text(
-                "İLAN VER",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 0,
-            child: Container(
-              height: 70,
-              width: 70,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-                color: _mainGreen,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.add, size: 40, color: Colors.white),
-                onPressed: _ilanEkleSayfasinaGit,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFab() {
-    return Container(
-      margin: const EdgeInsets.only(top: 30),
-      height: 70,
-      width: 70,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 4),
-        color: _mainGreen,
-      ),
-      child: IconButton(
-        icon: const Icon(Icons.add, size: 40, color: Colors.white),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _ilanEkleSayfasinaGit,
-      ),
-    );
-  }
-
-  Widget _buildBottomBar() {
-    return Container(
-      height: 80,
-      color: _mainGreen,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.only(top: 40.0),
-      child: const Text(
-        "İLAN VER",
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
+        backgroundColor: _mainGreen,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'İlan Ver',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -319,7 +278,7 @@ class _IlanlarPageState extends State<IlanlarPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.grey.shade400),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [

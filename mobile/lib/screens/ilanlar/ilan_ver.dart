@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 import '../../models/ilan_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_form_widgets.dart';
+import '../../services/api_service.dart';
 
 // --- 4. SAYFA: İLAN GİRİŞ FORMU ---
 class IlanGirisFormPage extends StatefulWidget {
-  const IlanGirisFormPage({super.key});
+  final IlanModel? ilan; // Düzenleme için
+
+  const IlanGirisFormPage({super.key, this.ilan});
 
   @override
   State<IlanGirisFormPage> createState() => _IlanGirisFormPageState();
@@ -51,7 +54,40 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
       if (authProvider.user != null) {
         _adController.text = authProvider.user!.name;
       }
+
+      // Düzenleme modu: Mevcut ilan verilerini yükle
+      if (widget.ilan != null) {
+        _loadIlanData();
+      }
     });
+  }
+
+  void _loadIlanData() {
+    final ilan = widget.ilan!;
+
+    _baslikController.text = ilan.baslik ?? '';
+    _tarihController.text = ilan.tarih ?? '';
+    _secilenSaat = ilan.saat;
+    secilenKonum = ilan.konum;
+    _secilenOyuncuSayisi = ilan.kisiSayisi;
+    _aciklamaController.text = ilan.aciklama ?? '';
+    secilenSeviye = ilan.seviye;
+
+    // Ücret parse et (örn: "50 TL" -> "50")
+    if (ilan.ucret != null) {
+      _ucretController.text = ilan.ucret!.replaceAll(' TL', '').trim();
+    }
+
+    // Mevkileri parse et
+    if (ilan.mevki != null) {
+      final mevkiler = ilan.mevki!.split(', ');
+      isKaleci = mevkiler.contains('Kaleci');
+      isDefans = mevkiler.contains('Defans');
+      isOrtaSaha = mevkiler.contains('Orta Saha');
+      isForvet = mevkiler.contains('Forvet');
+    }
+
+    setState(() {});
   }
 
   // TARİH SEÇİMİ (YYYY-MM-DD formatında kaydedilir - backend için)
@@ -73,12 +109,21 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isEditMode = widget.ilan != null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: mainGreen,
+        title: Text(
+          isEditMode ? 'İlan Düzenle' : 'Yeni İlan',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
@@ -155,7 +200,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButtonFormField<String>(
-                          value: _secilenSaat,
+                          initialValue: _secilenSaat,
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                             suffixIcon: Icon(
@@ -196,7 +241,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButtonFormField<int>(
-                    value: _secilenOyuncuSayisi,
+                    initialValue: _secilenOyuncuSayisi,
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(vertical: 15),
@@ -291,6 +336,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                           controller: _ucretController,
                           isNumber: true,
                           maxLength: 4,
+                          isRequired: false, // Ücret opsiyonel
                         ),
                       ],
                     ),
@@ -330,7 +376,7 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                       vertical: 12,
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       List<String> mevkiler = [];
                       if (isKaleci) mevkiler.add("Kaleci");
@@ -365,24 +411,79 @@ class _IlanGirisFormPageState extends State<IlanGirisFormPage> {
                       );
                       final userId = authProvider.user?.id;
 
-                      final yeniIlan = IlanModel(
-                        baslik: _baslikController.text,
-                        aciklama: _aciklamaController.text,
-                        tarih: _tarihController.text,
-                        saat: _secilenSaat!,
-                        konum: secilenKonum!,
-                        kisiSayisi: _secilenOyuncuSayisi,
-                        mevki: mevkiler.isNotEmpty ? mevkiler.join(", ") : null,
-                        seviye: secilenSeviye,
-                        ucret: _ucretController.text.isNotEmpty
-                            ? "${_ucretController.text} TL"
-                            : null,
-                        kullaniciId: userId != null
-                            ? int.tryParse(userId)
-                            : null,
+                      // Düzenleme modu
+                      print(
+                        '🔍 Edit Mode: $isEditMode, İlan ID: ${widget.ilan?.ilanId}',
                       );
+                      if (isEditMode && widget.ilan?.ilanId != null) {
+                        try {
+                          print('📝 Güncelleme başlatılıyor...');
+                          final response = await ApiService.instance.updateIlan(
+                            ilanId: widget.ilan!.ilanId.toString(),
+                            baslik: _baslikController.text,
+                            aciklama: _aciklamaController.text,
+                            tarih: _tarihController.text,
+                            saat: _secilenSaat!,
+                            konum: secilenKonum!,
+                            kisiSayisi: _secilenOyuncuSayisi,
+                            mevki: mevkiler.isNotEmpty
+                                ? mevkiler.join(", ")
+                                : null,
+                            seviye: secilenSeviye,
+                            ucret: _ucretController.text.isNotEmpty
+                                ? double.tryParse(_ucretController.text)
+                                : null,
+                          );
 
-                      Navigator.pop(context, yeniIlan);
+                          if (response['success']) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('İlan başarıyla güncellendi'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            Navigator.pop(context, true);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  response['message'] ?? 'Güncelleme başarısız',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Bir hata oluştu'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } else {
+                        // Yeni ilan oluşturma
+                        final yeniIlan = IlanModel(
+                          baslik: _baslikController.text,
+                          aciklama: _aciklamaController.text,
+                          tarih: _tarihController.text,
+                          saat: _secilenSaat!,
+                          konum: secilenKonum!,
+                          kisiSayisi: _secilenOyuncuSayisi,
+                          mevki: mevkiler.isNotEmpty
+                              ? mevkiler.join(", ")
+                              : null,
+                          seviye: secilenSeviye,
+                          ucret: _ucretController.text.isNotEmpty
+                              ? "${_ucretController.text} TL"
+                              : null,
+                          kullaniciId: userId != null
+                              ? int.tryParse(userId)
+                              : null,
+                        );
+
+                        Navigator.pop(context, yeniIlan);
+                      }
                     }
                   },
                   child: const Text(

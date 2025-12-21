@@ -4,6 +4,7 @@ import '../../models/ilan_model.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 import 'chat_page.dart';
+import 'ilan_ver.dart';
 
 // --- 3. SAYFA: İLAN DETAY (PROFİL GÖRÜNÜMÜ) ---
 class IlanDetayPage extends StatefulWidget {
@@ -18,18 +19,30 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
   final Color _mainGreen = const Color(0xFF2FB335);
   String? _profileImageUrl;
   bool _isLoadingProfile = true;
+  String? _currentUserId;
+  late IlanModel currentIlan; // Güncel ilan verisi
 
   @override
   void initState() {
     super.initState();
+    currentIlan = widget.ilan; // Başlangıç verisi
+    _loadCurrentUser();
     _loadUserProfile();
   }
 
+  Future<void> _loadCurrentUser() async {
+    final storage = StorageService();
+    final userId = await storage.getUserId();
+    setState(() {
+      _currentUserId = userId;
+    });
+  }
+
   Future<void> _loadUserProfile() async {
-    if (widget.ilan.kullaniciId != null) {
+    if (currentIlan.kullaniciId != null) {
       try {
         final response = await ApiService.instance.getProfile(
-          widget.ilan.kullaniciId.toString(),
+          currentIlan.kullaniciId.toString(),
         );
         if (response['success'] == true && response['data'] != null) {
           final data = response['data']['data'] ?? response['data'];
@@ -56,7 +69,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
 
   String _formatDateTime() {
     try {
-      final dateTime = widget.ilan.fullDateTime;
+      final dateTime = currentIlan.fullDateTime;
       final day = dateTime.day.toString().padLeft(2, '0');
       final month = dateTime.month.toString().padLeft(2, '0');
       final year = dateTime.year;
@@ -64,7 +77,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
       final minute = dateTime.minute.toString().padLeft(2, '0');
       return '$day/$month/$year $hour:$minute';
     } catch (e) {
-      return '${widget.ilan.tarih} ${widget.ilan.saat}';
+      return '${currentIlan.tarih} ${currentIlan.saat}';
     }
   }
 
@@ -84,11 +97,13 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
     final currentId = await storage.getUserId();
     int? sohbetId;
 
-    if (currentId != null && widget.ilan.ilanId != null && widget.ilan.kullaniciId != null) {
+    if (currentId != null &&
+        currentIlan.ilanId != null &&
+        currentIlan.kullaniciId != null) {
       final res = await ApiService.instance.createSohbet(
-        ilanId: widget.ilan.ilanId.toString(),
+        ilanId: currentIlan.ilanId.toString(),
         baslatanId: currentId,
-        ilanSahibiId: widget.ilan.kullaniciId.toString(),
+        ilanSahibiId: currentIlan.kullaniciId.toString(),
       );
 
       if (res['success'] && res['data'] != null) {
@@ -102,8 +117,8 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
       MaterialPageRoute(
         builder: (context) => ChatPage(
           sohbetId: sohbetId,
-          receiverName: widget.ilan.kullaniciAdi ?? 'Kullanıcı',
-          receiverId: widget.ilan.kullaniciId,
+          receiverName: currentIlan.kullaniciAdi ?? 'Kullanıcı',
+          receiverId: currentIlan.kullaniciId,
           profileImageUrl: _profileImageUrl,
         ),
       ),
@@ -116,7 +131,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Mesajınız ${widget.ilan.kullaniciAdi} kişisine gönderildi',
+            'Mesajınız ${currentIlan.kullaniciAdi} kişisine gönderildi',
           ),
           backgroundColor: _mainGreen,
           duration: const Duration(seconds: 3),
@@ -125,7 +140,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
 
       // Burada backend'e mesaj gönderme API'si eklenebilir
       // await ApiService.instance.sendMessage(
-      //   receiverId: widget.ilan.kullaniciId,
+      //   receiverId: currentIlan.kullaniciId,
       //   message: message,
       // );
     } catch (e) {
@@ -135,6 +150,99 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('İlanı Sil'),
+          content: const Text('Bu ilanı silmek istediğinizden emin misiniz?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _deleteIlan();
+              },
+              child: const Text('Sil', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteIlan() async {
+    try {
+      final response = await ApiService.instance.deleteIlan(
+        currentIlan.ilanId.toString(),
+      );
+
+      if (response['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('İlan başarıyla silindi'),
+            backgroundColor: _mainGreen,
+          ),
+        );
+        Navigator.pop(context, true); // Geri dön ve listeyi yenile
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'İlan silinemedi'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bir hata oluştu'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showEditDialog() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => IlanGirisFormPage(ilan: currentIlan),
+      ),
+    );
+
+    // Eğer güncelleme başarılı olduysa (true döndü)
+    if (result == true && mounted) {
+      // Güncel veriyi API'den çek
+      final updatedIlan = await ApiService.instance.fetchIlanById(
+        currentIlan.ilanId.toString(),
+      );
+
+      if (updatedIlan != null) {
+        setState(() {
+          currentIlan = updatedIlan;
+        });
+      }
+
+      // Başarı mesajı göster
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('İlan başarıyla güncellendi!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      // Listeyi yenilemek için geri dön
+      Navigator.pop(context, true);
     }
   }
 
@@ -184,7 +292,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.ilan.baslik,
+                    currentIlan.baslik,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -193,7 +301,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                   const SizedBox(height: 15),
                   _buildDetailRow(
                     Icons.location_on,
-                    widget.ilan.konum,
+                    currentIlan.konum,
                     const Color(0xFFE53935), // Kırmızı
                   ),
                   _buildDetailRow(
@@ -201,44 +309,44 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                     _formatDateTime(),
                     const Color(0xFF1E88E5), // Mavi
                   ),
-                  if (widget.ilan.kisiSayisi != null)
+                  if (currentIlan.kisiSayisi != null)
                     _buildDetailRow(
                       Icons.people,
-                      '${widget.ilan.kisiSayisi} Oyuncu Aranıyor',
+                      '${currentIlan.kisiSayisi} Oyuncu Aranıyor',
                       const Color(0xFFFB8C00), // Turuncu
                     ),
-                  if (widget.ilan.mevki != null &&
-                      widget.ilan.mevki!.isNotEmpty)
+                  if (currentIlan.mevki != null &&
+                      currentIlan.mevki!.isNotEmpty)
                     _buildDetailRow(
                       Icons.person,
-                      widget.ilan.mevki!,
+                      currentIlan.mevki!,
                       const Color(0xFF8E24AA), // Mor
                     ),
-                  if (widget.ilan.seviye != null &&
-                      widget.ilan.seviye!.isNotEmpty)
+                  if (currentIlan.seviye != null &&
+                      currentIlan.seviye!.isNotEmpty)
                     _buildDetailRow(
                       Icons.star,
-                      widget.ilan.seviye!,
+                      currentIlan.seviye!,
                       const Color(0xFFFDD835), // Sarı
                     ),
-                  if (widget.ilan.ucret != null &&
-                      widget.ilan.ucret!.isNotEmpty)
+                  if (currentIlan.ucret != null &&
+                      currentIlan.ucret!.isNotEmpty)
                     _buildDetailRow(
                       Icons.monetization_on,
-                      widget.ilan.ucret!,
+                      currentIlan.ucret!,
                       const Color(0xFF43A047), // Yeşil
                     ),
 
                   const SizedBox(height: 15),
-                  if (widget.ilan.aciklama.isNotEmpty)
+                  if (currentIlan.aciklama.isNotEmpty)
                     Text(
-                      widget.ilan.aciklama,
+                      currentIlan.aciklama,
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black87,
                       ),
                     ),
-                  if (widget.ilan.aciklama.isNotEmpty)
+                  if (currentIlan.aciklama.isNotEmpty)
                     const SizedBox(height: 20),
 
                   // Harita / Yol Tarifi Kısmı
@@ -326,7 +434,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            (widget.ilan.kullaniciAdi ?? 'Bilinmeyen Kullanıcı')
+                            (currentIlan.kullaniciAdi ?? 'Bilinmeyen Kullanıcı')
                                 .toUpperCase(),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -340,24 +448,114 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _mainGreen,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: _showMessageDialog,
-                      child: const Text(
-                        "MESAJ GÖNDER",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                  // Mesaj gönder butonu - sadece başkalarının ilanları için
+                  if (_currentUserId != null &&
+                      currentIlan.kullaniciId != null &&
+                      _currentUserId != currentIlan.kullaniciId.toString())
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _mainGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: _showMessageDialog,
+                        child: const Text(
+                          "MESAJ GÖNDER",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+
+                  // Kendi ilanı için bilgi mesajı ve düzenle/sil butonları
+                  if (_currentUserId != null &&
+                      currentIlan.kullaniciId != null &&
+                      _currentUserId == currentIlan.kullaniciId.toString()) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[300]!, width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.red[700],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Bu sizin ilanınız",
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: _showEditDialog,
+                            icon: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            label: const Text(
+                              "DÜZENLE",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: _showDeleteConfirmation,
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            label: const Text(
+                              "SİL",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -370,7 +568,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
 
   // Büyük profil resmi için baş harf avatarı
   Widget _buildInitialAvatar() {
-    final kullaniciAdi = widget.ilan.kullaniciAdi ?? 'U';
+    final kullaniciAdi = currentIlan.kullaniciAdi ?? 'U';
     final initial = kullaniciAdi.isNotEmpty
         ? kullaniciAdi[0].toUpperCase()
         : 'U';
@@ -392,7 +590,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
 
   // Küçük profil resmi için baş harf avatarı
   Widget _buildSmallInitialAvatar() {
-    final kullaniciAdi = widget.ilan.kullaniciAdi ?? 'U';
+    final kullaniciAdi = currentIlan.kullaniciAdi ?? 'U';
     final initial = kullaniciAdi.isNotEmpty
         ? kullaniciAdi[0].toUpperCase()
         : 'U';
