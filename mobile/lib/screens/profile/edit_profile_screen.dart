@@ -87,7 +87,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF3BB54A), Color(0xFF2E9440)],
+                colors: [const Color(0xFF2FB335), const Color(0xFF2FB335)],
               ),
             ),
             child: SafeArea(
@@ -256,7 +256,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleUpdateProfile,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF3BB54A),
+                            backgroundColor: const Color(0xFF2FB335),
                             foregroundColor: Colors.white,
                             elevation: 5,
                             shape: RoundedRectangleBorder(

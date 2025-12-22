@@ -45,7 +45,7 @@ class ProfileScreen extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0xFF3BB54A), Color(0xFF2E9440)],
+                    colors: [Color(0xFF2FB335), Color(0xFF2FB335)],
                   ),
                 ),
                 child: Center(
@@ -216,7 +216,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3BB54A),
+                        backgroundColor: const Color(0xFF2FB335),
                         foregroundColor: Colors.white,
                         elevation: 3,
                         shape: RoundedRectangleBorder(

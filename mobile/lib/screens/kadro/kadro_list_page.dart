@@ -254,24 +254,6 @@ class _KadroListPageState extends State<KadroListPage> {
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
           const SizedBox(height: 30),
-          ElevatedButton.icon(
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const KadroOlusturPage(),
-                ),
-              );
-              _yukleKadrolar();
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Yeni Kadro Oluştur'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: mainGreen,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
         ],
       ),
     );
