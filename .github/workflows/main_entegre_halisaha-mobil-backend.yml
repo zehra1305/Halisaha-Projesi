@@ -52,4 +52,4 @@ jobs:
           app-name: 'halisaha-mobil-backend'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8B120AD7C861493BA346C857FC0FBC77 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A056DD0CB9334B7E8FB257B84C13683B }}
