@@ -21,7 +21,17 @@ const feedbackRoutes = require('./routes/feedback');
 const kadrolarRoutes = require('./routes/kadrolar');
 
 // Middleware
-app.use(cors());
+// CORS ayarları - Tüm originlere izin ver
+app.use(cors({
+    origin: '*', // Veya belirli domainler: ['https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net']
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
+// Preflight istekleri için OPTIONS
+app.options('*', cors());
+
 app.use(express.json({ charset: 'utf-8' }));
 app.use(express.urlencoded({ extended: true, charset: 'utf-8' }));
 

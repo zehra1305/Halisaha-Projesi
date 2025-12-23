@@ -10,14 +10,16 @@ class ApiService {
   static final ApiService instance = ApiService._internal();
   factory ApiService() => instance;
   ApiService._internal();
-  // Backend URL'inizi buraya yazın
-  // Android Emulator için 10.0.2.2 kullanılır (localhost yerine)
-  static const String baseUrl = 'http://10.0.2.2:3001/api';
-  // iOS Simulator için: 'http://localhost:3001/api'
-  // Gerçek sunucu için: 'https://yourdomain.com/api'
+  // Backend URL - Azure App Service
+  static const String baseUrl =
+      'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net/api';
 
-  // Timeout süresi
-  static const Duration timeout = Duration(seconds: 10);
+  // Local geliştirme için:
+  // Android Emulator: 'http://10.0.2.2:3001/api'
+  // iOS Simulator: 'http://localhost:3001/api'
+
+  // Timeout süresi (Azure cold start için uzun tutuldu)
+  static const Duration timeout = Duration(seconds: 30);
 
   // UTF-8 encoding için header helper
   Map<String, String> get _headers => {
@@ -93,6 +95,7 @@ class ApiService {
     bool rememberMe = false,
   }) async {
     try {
+      print('🔐 Login isteği gönderiliyor: $baseUrl/auth/login');
       final response = await http
           .post(
             Uri.parse('$baseUrl/auth/login'),
@@ -105,6 +108,7 @@ class ApiService {
           )
           .timeout(timeout);
 
+      print('✅ Login response: ${response.statusCode}');
       if (response.statusCode == 200) {
         return {
           'success': true,
@@ -119,6 +123,7 @@ class ApiService {
         };
       }
     } catch (e) {
+      print('❌ Login hatası: $e');
       return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
     }
   }
