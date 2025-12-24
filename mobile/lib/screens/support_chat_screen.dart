@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/support_message.dart';
 import 'dart:async';
-import 'dart:convert';
 
 class SupportChatScreen extends StatefulWidget {
   const SupportChatScreen({super.key});
@@ -192,10 +191,10 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           ],
         ),
         actions: [
-          IconButton(
+          /* IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _fetchMessages(scrollDown: true),
-          ),
+          ),*/
         ],
       ),
       body: Column(

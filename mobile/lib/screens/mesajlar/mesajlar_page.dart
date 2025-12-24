@@ -3,7 +3,7 @@ import '../ilanlar/chat_page.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 
-// 👇 1. DEĞİŞİKLİK: Bizim Support ekranını buraya dahil ettik
+// 👇 DÜZELTİLEN KISIM BURASI (../ eklendi)
 import '../support_chat_screen.dart';
 
 class MesajlarPage extends StatefulWidget {
@@ -90,18 +90,17 @@ class _MesajlarPageState extends State<MesajlarPage> {
       }
     } catch (e) {
       // Hata yönetimi
-      print('Sohbet yükleme hatası: $e');
+      debugPrint(
+        'Sohbet yükleme hatası: $e',
+      ); // print yerine debugPrint kullanıldı
     }
   }
 
-  // 👇 2. DEĞİŞİKLİK: Eski ChatPage yerine YENİ EKRANI açıyoruz
+  // 👇 Canlı Destek Ekranını Açan Fonksiyon
   void _openAdminChat() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        // Burası ChatPage idi, SupportChatScreen yaptık ✅
-        builder: (context) => const SupportChatScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const SupportChatScreen()),
     );
   }
 
@@ -143,8 +142,7 @@ class _MesajlarPageState extends State<MesajlarPage> {
                 style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
               trailing: Icon(Icons.chevron_right, color: _mainGreen),
-              onTap:
-                  _openAdminChat, // Buraya tıklayınca yukarıdaki fonksiyon çalışacak
+              onTap: _openAdminChat, // Tıklanınca Canlı Destek açılacak
             ),
           ),
           const Divider(height: 1),
