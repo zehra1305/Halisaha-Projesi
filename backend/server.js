@@ -21,17 +21,7 @@ const feedbackRoutes = require('./routes/feedback');
 const kadrolarRoutes = require('./routes/kadrolar');
 
 // Middleware
-// CORS ayarları - Tüm originlere izin ver
-app.use(cors({
-    origin: '*', // Veya belirli domainler: ['https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net']
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
-
-// Preflight istekleri için OPTIONS
-app.options('*', cors());
-
+app.use(cors());
 app.use(express.json({ charset: 'utf-8' }));
 app.use(express.urlencoded({ extended: true, charset: 'utf-8' }));
 
@@ -77,6 +67,118 @@ app.get('/api/health-db', async (req, res) => {
         });
     }
 });
+app.post('/api/support/start', async (req, res) => {
+
+    const { kullanici_id } = req.body;
+
+    try {
+
+        // 1. Önce var olan bir sohbet var mı bak (Admin ID her zaman 1 varsayılır)
+
+        // İlan ID'si 2 olan (Bizim Canlı Destek İlanı) sohbete bakıyoruz
+
+        const checkQuery = `
+
+            SELECT * FROM sohbet 
+
+            WHERE (baslatan_id = $1 AND ilan_sahibi_id = 1 AND ilan_id = 2) 
+
+               OR (baslatan_id = 1 AND ilan_sahibi_id = $1 AND ilan_id = 2) 
+
+            LIMIT 1`;
+
+        const existingChat = await db.query(checkQuery, [kullanici_id]);
+ 
+        if (existingChat.rows.length > 0) {
+
+            return res.json({ sohbet_id: existingChat.rows[0].sohbet_id });
+
+        }
+ 
+        // 2. Yoksa yeni oluştur (İlan ID = 2 KURALI BURADA)
+
+        const insertQuery = `
+
+            INSERT INTO sohbet (ilan_id, baslatan_id, ilan_sahibi_id) 
+
+            VALUES (2, $1, 1) 
+
+            RETURNING sohbet_id`;
+
+        const newChat = await db.query(insertQuery, [kullanici_id]);
+
+        res.json({ sohbet_id: newChat.rows[0].sohbet_id });
+ 
+    } catch (err) {
+
+        console.error("Support Chat Başlatma Hatası:", err);
+
+        res.status(500).json({ error: 'Sohbet başlatılamadı' });
+
+    }
+
+});
+ 
+// B. Mesajları Getir (Canlı Destek İçin)
+
+app.get('/api/mesajlar/:sohbetId', async (req, res) => {
+
+    try {
+
+        const { sohbetId } = req.params;
+
+        const query = `
+
+            SELECT * FROM mesaj 
+
+            WHERE sohbet_id = $1 
+
+            ORDER BY gonderme_zamani ASC`;
+
+        const result = await db.query(query, [sohbetId]);
+
+        res.json(result.rows);
+
+    } catch (err) {
+
+        console.error("Mesaj Getirme Hatası:", err);
+
+        res.status(500).json({ error: 'Mesajlar alınamadı' });
+
+    }
+
+});
+ 
+// C. Mesaj Gönder (Canlı Destek İçin)
+
+app.post('/api/mesajlar', async (req, res) => {
+
+    try {
+
+        const { sohbet_id, gonderen_id, icerik } = req.body;
+
+        const query = `
+
+            INSERT INTO mesaj (sohbet_id, gonderen_id, icerik) 
+
+            VALUES ($1, $2, $3) 
+
+            RETURNING *`;
+
+        const result = await db.query(query, [sohbet_id, gonderen_id, icerik]);
+
+        res.status(201).json(result.rows[0]);
+
+    } catch (err) {
+
+        console.error("Mesaj Gönderme Hatası:", err);
+
+        res.status(500).json({ error: 'Mesaj gönderilemedi' });
+
+    }
+
+});
+ 
 // Duyurular routes
 app.use('/api/duyurular', duyurularRoutes);
 

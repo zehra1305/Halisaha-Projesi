@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/appointment.dart';
 import '../models/ilan_model.dart';
 import '../models/randevu_model.dart';
+import '../models/support_message.dart';
 
 class ApiService {
   // Singleton pattern
@@ -927,6 +928,70 @@ class ApiService {
       }
     } catch (e) {
       return {'success': false, 'message': 'Bağlantı hatası: ${e.toString()}'};
+    }
+  }
+
+  // 1. Sohbet Başlat (Veya Varsa Getir)
+  Future<int?> startSupportChat(int userId) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/support/start'),
+            headers: _headers,
+            body: jsonEncode({"kullanici_id": userId}),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['sohbet_id']; // Sohbet ID'sini döndürür
+      }
+    } catch (e) {
+      print("Sohbet başlatma hatası: $e");
+    }
+    return null;
+  }
+
+  // 2. Mesajları Getir
+  Future<List<SupportMessage>> getSupportMessages(int chatId) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/mesajlar/$chatId'), headers: _headers)
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        // Türkçe karakterler için utf8 decode yapıyoruz
+        List<dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
+        return body.map((item) => SupportMessage.fromJson(item)).toList();
+      }
+    } catch (e) {
+      print("Mesaj çekme hatası: $e");
+    }
+    return [];
+  }
+
+  // 3. Mesaj Gönder
+  Future<bool> sendSupportMessage(
+    int chatId,
+    int userId,
+    String message,
+  ) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/mesajlar'),
+            headers: _headers,
+            body: jsonEncode({
+              "sohbet_id": chatId,
+              "gonderen_id": userId, // Kullanıcının kendi ID'si
+              "icerik": message,
+            }),
+          )
+          .timeout(timeout);
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      print("Mesaj gönderme hatası: $e");
+      return false;
     }
   }
 }

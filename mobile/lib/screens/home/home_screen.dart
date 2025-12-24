@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomAppBar(
-        color: mainGreen,
+        color: const Color(0xFF2FB335),
         child: SizedBox(
           height: 60,
           child: Row(
@@ -610,7 +610,7 @@ class _HomeTabState extends State<HomeTab> {
                                         width: 4,
                                         height: 24,
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF2FB335),
+                                          color: mainGreen,
                                           borderRadius: BorderRadius.circular(
                                             2,
                                           ),

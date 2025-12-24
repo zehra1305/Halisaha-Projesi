@@ -22,7 +22,7 @@ const pool = new Pool(
         port: parseInt(process.env.DB_PORT) || 5432,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME || 'halisaha_proje_db',
-        ssl: false,
+        ssl: { rejectUnauthorized: false },
         // UTF-8 encoding
         client_encoding: 'UTF8',
     }

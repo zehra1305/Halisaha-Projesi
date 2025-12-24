@@ -5,29 +5,31 @@ import 'package:http/http.dart' as http;
 import '../models/duyuru.dart';
 
 class UserApiService {
-  // Backend Adresi (Otomatik Ayarlanır)
-  String get baseUrl {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://localhost:3001';
-  }
+  // Backend Adresi - Canlı Azure Sunucusu
+  // Artık localhost yerine bu linki kullanıyoruz
+  static const String baseUrl =
+      'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net';
 
   // Duyuruları Getir
   Future<List<Duyuru>> getDuyurular() async {
     try {
+      // url değişkeni otomatik olarak Azure linkini alacak
       final url = '$baseUrl/api/duyurular';
       debugPrint("📡 Duyurular API çağrısı: $url");
 
       final response = await http
           .get(Uri.parse(url), headers: {'Content-Type': 'application/json'})
           .timeout(
-            const Duration(seconds: 10),
+            const Duration(
+              seconds: 15,
+            ), // Azure'un uyanması için süreyi biraz artırdık
             onTimeout: () {
               debugPrint("⏱️ API Timeout!");
               throw Exception('Zaman aşımı');
             },
           );
 
+      // ... Kodun geri kalan kısmı aynı kalabilir
       debugPrint("📡 Response Status: ${response.statusCode}");
       debugPrint("📡 Response Headers: ${response.headers}");
 

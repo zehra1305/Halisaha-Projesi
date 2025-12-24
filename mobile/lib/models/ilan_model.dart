@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class IlanModel {
   final int? ilanId;
   final String baslik;

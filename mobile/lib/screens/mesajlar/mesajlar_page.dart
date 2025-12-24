@@ -3,6 +3,9 @@ import '../ilanlar/chat_page.dart';
 import '../../services/api_service.dart';
 import '../../services/storage_service.dart';
 
+// 👇 1. DEĞİŞİKLİK: Bizim Support ekranını buraya dahil ettik
+import '../support_chat_screen.dart';
+
 class MesajlarPage extends StatefulWidget {
   const MesajlarPage({super.key});
 
@@ -91,15 +94,13 @@ class _MesajlarPageState extends State<MesajlarPage> {
     }
   }
 
+  // 👇 2. DEĞİŞİKLİK: Eski ChatPage yerine YENİ EKRANI açıyoruz
   void _openAdminChat() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const ChatPage(
-          receiverName: 'Halısaha Yönetimi',
-          receiverId: 0, // Admin ID
-          profileImageUrl: null,
-        ),
+        // Burası ChatPage idi, SupportChatScreen yaptık ✅
+        builder: (context) => const SupportChatScreen(),
       ),
     );
   }
@@ -142,7 +143,8 @@ class _MesajlarPageState extends State<MesajlarPage> {
                 style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
               trailing: Icon(Icons.chevron_right, color: _mainGreen),
-              onTap: _openAdminChat,
+              onTap:
+                  _openAdminChat, // Buraya tıklayınca yukarıdaki fonksiyon çalışacak
             ),
           ),
           const Divider(height: 1),
