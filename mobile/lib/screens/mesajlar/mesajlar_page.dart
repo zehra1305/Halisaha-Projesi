@@ -60,28 +60,44 @@ class _MesajlarPageState extends State<MesajlarPage> {
         setState(() {
           _conversations.clear();
           _conversations.addAll(
-            data.map((c) {
-              final lastTimeStr =
-                  c['son_mesaj_zamani'] ?? c['olusturma_zamani'];
-              DateTime lastTime;
-              try {
-                lastTime = DateTime.parse(
-                  lastTimeStr ?? DateTime.now().toIso8601String(),
-                );
-              } catch (_) {
-                lastTime = DateTime.now();
-              }
+            data
+                .map((c) {
+                  final lastTimeStr =
+                      c['son_mesaj_zamani'] ?? c['olusturma_zamani'];
+                  DateTime lastTime;
+                  try {
+                    lastTime = DateTime.parse(
+                      lastTimeStr ?? DateTime.now().toIso8601String(),
+                    );
+                  } catch (_) {
+                    lastTime = DateTime.now();
+                  }
 
-              return ConversationItem(
-                sohbetId: c['sohbet_id'],
-                userId: c['diger_kullanici_id'] ?? 0,
-                userName: c['diger_kullanici_ad'] ?? 'Kullanıcı',
-                profileImageUrl: c['diger_kullanici_fotografi'],
-                lastMessage: c['son_mesaj'] ?? '',
-                lastMessageTime: lastTime,
-                unreadCount: 0,
-              );
-            }).toList(),
+                  return ConversationItem(
+                    sohbetId: c['sohbet_id'],
+                    userId: c['diger_kullanici_id'] ?? 0,
+                    userName: c['diger_kullanici_ad'] ?? 'Kullanıcı',
+                    profileImageUrl: c['diger_kullanici_fotografi'],
+                    lastMessage: c['son_mesaj'] ?? '',
+                    lastMessageTime: lastTime,
+                    unreadCount: 0,
+                  );
+                })
+                // Yönetim sohbetini listeden çıkar (ör: userId == 1 veya userName 'rüya' veya 'Halısaha Yönetimi')
+                .where((item) {
+                  // Burada admin userId veya userName kontrolü yapabilirsin
+                  // Örneğin admin userId = 1 ise veya userName 'rüya', 'Halısaha Yönetimi' ise
+                  final adminUserNames = [
+                    'rüya',
+                    'Halısaha Yönetimi',
+                    'halısaha yönetimi',
+                  ];
+                  return !(item.userId == 1 ||
+                      adminUserNames.contains(
+                        item.userName.trim().toLowerCase(),
+                      ));
+                })
+                .toList(),
           );
           _filteredConversations = List.from(_conversations);
         });
