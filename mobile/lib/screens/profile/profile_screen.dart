@@ -75,7 +75,7 @@ class ProfileScreen extends StatelessWidget {
                                   user.profileImage != null &&
                                       user.profileImage!.isNotEmpty
                                   ? Image.network(
-                                      'http://10.0.2.2:3001${user.profileImage}',
+                                      'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net${user.profileImage}',
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {

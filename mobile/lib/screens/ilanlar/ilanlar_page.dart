@@ -294,7 +294,7 @@ class _IlanlarPageState extends State<IlanlarPage> {
                   ilan.profilFotografi != null &&
                       ilan.profilFotografi!.isNotEmpty
                   ? Image.network(
-                      'http://10.0.2.2:3001${ilan.profilFotografi}',
+                      'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net${ilan.profilFotografi}',
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(

@@ -250,7 +250,7 @@ class _MesajlarPageState extends State<MesajlarPage> {
         conversation.profileImageUrl!.isNotEmpty) {
       imageUrl = conversation.profileImageUrl!.startsWith('http')
           ? conversation.profileImageUrl
-          : 'http://10.0.2.2:3001${conversation.profileImageUrl!.startsWith('/') ? conversation.profileImageUrl : '/${conversation.profileImageUrl}'}';
+          : 'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net${conversation.profileImageUrl!.startsWith('/') ? conversation.profileImageUrl : '/${conversation.profileImageUrl}'}';
     }
 
     return Column(

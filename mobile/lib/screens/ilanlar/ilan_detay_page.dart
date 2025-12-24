@@ -274,8 +274,10 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                 child: _isLoadingProfile
                     ? const Center(child: CircularProgressIndicator())
                     : _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                    // Eski hali: 'http://10.0.2.2:3001$_profileImageUrl'
+                    // Yeni hali:
                     ? Image.network(
-                        'http://10.0.2.2:3001$_profileImageUrl',
+                        'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net$_profileImageUrl',
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return _buildInitialAvatar();
@@ -420,7 +422,7 @@ class _IlanDetayPageState extends State<IlanDetayPage> {
                               _profileImageUrl != null &&
                                   _profileImageUrl!.isNotEmpty
                               ? Image.network(
-                                  'http://10.0.2.2:3001$_profileImageUrl',
+                                  'https://halisaha-mobil-backend-c4dtaqfnfpdfepg5.germanywestcentral-01.azurewebsites.net$_profileImageUrl',
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
                                     return _buildSmallInitialAvatar();
